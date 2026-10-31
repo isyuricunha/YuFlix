@@ -1,0 +1,27 @@
+/* The YuTheme package is the only source of interface colors. */
+:root { font-family:'DM Sans Variable',var(--font-sans); color-scheme:dark; }
+*,*::before,*::after { box-sizing:border-box; }
+html,body,#root { margin:0; min-height:100%; }
+body { font-family:'DM Sans Variable',var(--font-sans); background:var(--yu-bg-canvas); color:var(--text-primary); -webkit-font-smoothing:antialiased; }
+button,input,select { font:inherit; }
+a { color:inherit; }
+button { cursor:pointer; }
+button:disabled,input:disabled { cursor:not-allowed; opacity:.55; }
+a,button,input,select { -webkit-tap-highlight-color:transparent; }
+:focus-visible { outline:3px solid var(--accent-gold); outline-offset:4px; }
+::selection { background:var(--accent-gold); color:var(--text-inverse); }
+.yf-sr-only { position:absolute!important; width:1px; height:1px; padding:0; margin:-1px; border:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+.yf-brand { display:inline-flex; align-items:baseline; flex-shrink:0; font-size:32px; line-height:1; font-weight:760; letter-spacing:-.07em; text-decoration:none; }
+.yf-brand span { color:var(--text-primary); }
+.yf-brand strong { color:var(--accent-gold); font-weight:760; }
+.yf-brand--compact { font-size:25px; }
+.yf-kicker { font-size:11px; font-weight:680; letter-spacing:.10em; text-transform:uppercase; color:var(--text-tertiary); }
+.yf-avatar { width:36px; height:36px; border-radius:50%; display:grid; place-items:center; color:var(--text-primary); background:var(--yu-bg-surface-active); font-size:13px; font-weight:750; flex-shrink:0; }
+.yf-alert { padding:14px 16px; border-radius:11px; border:1px solid var(--accent-red); color:var(--text-primary); background:var(--yu-bg-surface); font-size:13px; line-height:1.5; }
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; transition-duration:.01ms!important; }
+}
+
+.yf-loading { min-height:100svh; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:18px; color:var(--text-secondary); }
+.yf-loading__name { font-size:40px; font-weight:740; letter-spacing:-.075em; color:var(--text-primary); }
+.yf-loading__detail { font-size:13px; color:var(--text-tertiary); }

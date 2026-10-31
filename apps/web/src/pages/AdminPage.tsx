@@ -74,113 +74,115 @@ export default function AdminPage() {
     finally { setBusy(false) }
   }
 
-  return <div className="admin-page">
-    <aside className="admin-sidebar">
+  return <div className="yf-admin">
+    <header className="yf-admin__topbar">
       <Brand compact />
-      <div className="admin-sidebar__section">
-        <span className="small-caps">GERENCIAMENTO</span>
-        <nav aria-label="Configurações" className="admin-nav">
+      <Link to="/" className="yf-admin__back">Voltar ao início</Link>
+      <div className="yf-admin__account"><span className="yf-avatar" aria-hidden="true">{user?.username.slice(0,1).toUpperCase()}</span>
+        <span>{user?.username}</span>
+        <button className="yf-admin__signout" type="button" disabled={busy} onClick={signOut}>Sair</button>
+      </div>
+    </header>
+
+    <div className="yf-admin__layout">
+      <aside className="yf-admin__sidebar">
+        <span className="yf-kicker">CONFIGURAÇÕES</span>
+        <nav className="yf-admin__nav" aria-label="Configurações">
           {([
-            ['overview', 'Visão geral', '01'],
-            ['users', 'Pessoas e acessos', '02'],
-            ['preferences', 'Preferências', '03'],
-          ] as const).map(([key, label, number]) =>
-            <button key={key} type="button" onClick={() => { setSection(key); setError(''); setNotice('') }}
-              className={section === key ? 'admin-nav__item is-current' : 'admin-nav__item'}
-              aria-pressed={section === key}>
-              <span>{label}</span><span>{number}</span>
+            ['overview', 'Visão geral'],
+            ['users', 'Usuários'],
+            ['preferences', 'Preferências'],
+          ] as const).map(([key, label]) =>
+            <button type="button" key={key} onClick={() => { setSection(key); setError(''); setNotice('') }}
+              className={section === key ? 'is-active' : ''} aria-pressed={section === key}>
+              {label}
             </button>)}
         </nav>
-      </div>
-      <div className="admin-sidebar__bottom">
-        <Link to="/" className="admin-back"><span aria-hidden="true">←</span> Voltar ao YuFlix</Link>
-        <div className="admin-profile"><span className="user-avatar" aria-hidden="true">{user?.username.slice(0,1).toUpperCase()}</span>
-          <span><strong>{user?.username}</strong><small>Administrador</small></span></div>
-      </div>
-    </aside>
+      </aside>
 
-    <div className="admin-content">
-      <header className="admin-content__top">
-        <Link className="admin-mobile-back" to="/">← YuFlix</Link>
-        <span className="small-caps">CONFIGURAÇÃO DO YUFLIX</span>
-        <button type="button" className="text-button" disabled={busy} onClick={signOut}>Sair da conta</button>
-      </header>
-      <main className="admin-main">
-        <div className="admin-heading">
-          <p className="story-overline"><span /> PAINEL ADMINISTRATIVO</p>
-          <h1>{section === 'overview' ? 'Tudo no seu lugar.' : section === 'users' ? 'Pessoas e acessos.' : 'Do seu jeito.'}</h1>
-          <p>{section === 'overview' ? 'Organize a experiência dos seus usuários sem perder o controle.' :
-            section === 'users' ? 'Cada pessoa com seu login, suas permissões e seu histórico.' :
-            'Preferências de conteúdo e reprodução disponíveis para o seu servidor.'}</p>
+      <main className="yf-admin__content">
+        <div className="yf-admin__heading">
+          <span className="yf-kicker">YUFLIX / ADMINISTRAÇÃO</span>
+          <h1>{section === 'overview' ? 'Visão geral' : section === 'users' ? 'Usuários' : 'Preferências'}</h1>
+          <p>{section === 'overview' ? 'Gerencie seu espaço e as pessoas que têm acesso a ele.' :
+            section === 'users' ? 'Contas individuais e permissões independentes.' :
+            'Escolha como seu conteúdo será apresentado e reproduzido.'}</p>
         </div>
+        {loading && <p className="yf-admin__loading" role="status">Carregando suas configurações...</p>}
 
-        {loading && <p className="admin-loading" role="status">Carregando suas configurações...</p>}
-        {!loading && section === 'overview' && <div className="admin-overview">
-          <div className="admin-overview__metric"><span>ACESSOS CADASTRADOS</span><strong>{users.length.toString().padStart(2, '0')}</strong><small>Contas com credenciais individuais</small></div>
-          <div className="admin-overview__metric"><span>FONTES</span><strong className="admin-overview__text">Em preparação</strong><small>Integrações de catálogos e streaming</small></div>
-          <div className="admin-overview__metric"><span>REPRODUÇÃO</span><strong className="admin-overview__text">Em preparação</strong><small>Direct Play, remux e HLS</small></div>
-          <div className="admin-overview__next">
-            <p className="eyebrow">PRÓXIMOS PASSOS</p><h2>Prepare a experiência de quem vai assistir.</h2>
-            <p>Você já pode organizar os usuários e salvar preferências. As fontes e o player entrarão em funcionamento quando a reprodução for validada.</p>
-            <button type="button" onClick={() => setSection('users')} className="admin-primary-action">Gerenciar usuários <span aria-hidden="true">→</span></button>
+        {!loading && section === 'overview' && <section className="yf-admin__overview" aria-label="Resumo da instalação">
+          <div className="yf-admin__summary">
+            <span className="yf-kicker">CONTAS ATIVAS</span>
+            <div><strong>{users.filter(person => person.enabled).length}</strong><span>pessoas com acesso ao YuFlix</span></div>
           </div>
-        </div>}
+          <div className="yf-admin__summary-list">
+            <div><div><h2>Usuários</h2><p>Gerencie contas e permissões.</p></div>
+              <button type="button" onClick={() => setSection('users')}>Gerenciar <span aria-hidden="true">→</span></button></div>
+            <div><div><h2>Preferências</h2><p>Idioma e comportamento de reprodução.</p></div>
+              <button type="button" onClick={() => setSection('preferences')}>Configurar <span aria-hidden="true">→</span></button></div>
+            <div><div><h2>Catálogos e reprodução</h2><p>Integração e player ainda em desenvolvimento.</p></div>
+              <span className="yf-admin__unavailable">Em breve</span></div>
+          </div>
+        </section>}
 
-        {!loading && section === 'users' && <div className="admin-users-layout">
-          <section className="admin-users-list" aria-labelledby="users-heading">
-            <div className="admin-subhead"><h2 id="users-heading">Contas cadastradas</h2><span>{users.length} {users.length === 1 ? 'pessoa' : 'pessoas'}</span></div>
-            {users.length === 0 ? <p>Nenhum usuário cadastrado.</p> : <div className="admin-users-table">
-              {users.map(person => <div className="admin-user-row" key={person.id}>
-                <span className="user-avatar" aria-hidden="true">{person.username[0]?.toUpperCase()}</span>
-                <div><strong>{person.username}</strong><small>{person.enabled ? 'Conta ativa' : 'Conta desativada'}</small></div>
-                <span className="user-role">{person.role === 'admin' ? 'Administrador' : 'Membro'}</span>
+        {!loading && section === 'users' && <div className="yf-admin__users">
+          <section aria-labelledby="users-heading" className="yf-admin__user-list">
+            <div className="yf-admin__section-title"><h2 id="users-heading">Pessoas com acesso</h2><span>{users.length}</span></div>
+            {users.length ? <div className="yf-admin__rows">
+              {users.map(person => <div className="yf-admin__user" key={person.id}>
+                <span className="yf-avatar" aria-hidden="true">{person.username.slice(0,1).toUpperCase()}</span>
+                <div><strong>{person.username}</strong><small>{person.enabled ? 'Conta ativa' : 'Desativada'}</small></div>
+                <span>{person.role === 'admin' ? 'Administrador' : 'Membro'}</span>
               </div>)}
-            </div>}
+            </div> : <p className="yf-admin__muted">Nenhum usuário cadastrado.</p>}
           </section>
-          <section className="admin-create" aria-labelledby="create-title">
-            <p className="eyebrow">NOVO ACESSO</p><h2 id="create-title">Adicionar pessoa</h2>
-            <p>Crie um acesso próprio para cada usuário. Não é necessário compartilhar senhas.</p>
-            <form onSubmit={createUser} className="admin-form">
+          <section className="yf-admin__new-user" aria-labelledby="create-title">
+            <h2 id="create-title">Adicionar pessoa</h2>
+            <p>Cada pessoa usa seu próprio usuário e senha.</p>
+            <form className="yf-admin__form" onSubmit={createUser}>
               <label htmlFor="create-username">Nome de usuário</label>
-              <input id="create-username" autoComplete="off" required pattern="[a-z][a-z0-9_]{2,31}" maxLength={32} value={username}
-                onChange={e => setUsername(e.target.value.toLowerCase())} placeholder="exemplo" />
+              <input id="create-username" autoComplete="off" pattern="[a-z][a-z0-9_]{2,31}" maxLength={32}
+                required value={username} onChange={event => setUsername(event.target.value.toLowerCase())}
+                placeholder="Nome de usuário" />
               <label htmlFor="create-password">Senha inicial</label>
-              <input id="create-password" type="password" autoComplete="new-password" minLength={12} required value={password}
-                onChange={e => setPassword(e.target.value)} placeholder="Mínimo de 12 caracteres" />
+              <input id="create-password" type="password" autoComplete="new-password" required minLength={12}
+                value={password} onChange={event => setPassword(event.target.value)}
+                placeholder="Mínimo de 12 caracteres" />
               <label htmlFor="create-role">Permissão</label>
-              <select id="create-role" value={role} onChange={e => setRole(e.target.value as 'member' | 'admin')}>
+              <select id="create-role" value={role} onChange={event => setRole(event.target.value as 'member' | 'admin')}>
                 <option value="member">Membro</option><option value="admin">Administrador</option>
               </select>
-              <button className="admin-primary-action" type="submit" disabled={busy}>{busy ? 'Criando acesso...' : 'Criar usuário'} <span aria-hidden="true">→</span></button>
+              <button className="yf-admin__primary" type="submit" disabled={busy}>{busy ? 'Criando...' : 'Criar usuário'}</button>
             </form>
           </section>
         </div>}
 
-        {!loading && section === 'preferences' && <section className="admin-preferences" aria-labelledby="settings-heading">
-          <div className="admin-subhead"><h2 id="settings-heading">Preferências gerais</h2><span>Valores compartilhados</span></div>
-          <p className="admin-preferences__description">As escolhas abaixo já são salvas no banco. Elas serão aplicadas aos conteúdos e ao player quando esses recursos estiverem disponíveis.</p>
-          <div className="admin-setting">
+        {!loading && section === 'preferences' && <section className="yf-admin__preferences" aria-labelledby="settings-heading">
+          <h2 id="settings-heading">Preferências gerais</h2>
+          <p className="yf-admin__muted">Os valores são salvos no banco. A aplicação ao catálogo e ao player depende da conclusão desses recursos.</p>
+          <div className="yf-admin__setting">
             <div><h3>Idioma do catálogo</h3><p>Idioma preferido para títulos e descrições.</p></div>
-            <div className="admin-setting__control">
-              <label className="sr-only" htmlFor="catalog-lang">Idioma preferido</label>
-              <select id="catalog-lang" value={language} onChange={e => setLanguage(e.target.value as 'pt-BR' | 'en-US')}>
+            <div className="yf-admin__setting-action">
+              <label htmlFor="catalog-lang" className="yf-sr-only">Idioma</label>
+              <select id="catalog-lang" value={language} onChange={event => setLanguage(event.target.value as 'pt-BR' | 'en-US')}>
                 <option value="pt-BR">Português (Brasil)</option><option value="en-US">English (US)</option>
               </select>
-              <button type="button" className="admin-outline-action" disabled={busy} onClick={() => saveSetting('catalog.default_language', language)}>Salvar</button>
+              <button type="button" disabled={busy} onClick={() => saveSetting('catalog.default_language',language)}>Salvar</button>
             </div>
           </div>
-          <div className="admin-setting">
-            <div><h3>Priorizar reprodução direta</h3><p>Evitar recodificação quando o dispositivo for compatível.</p></div>
-            <div className="admin-setting__control">
-              <label className="switch-label"><input type="checkbox" checked={preferDirect} onChange={e => setPreferDirect(e.target.checked)}/><span>{preferDirect ? 'Ativado' : 'Desativado'}</span></label>
-              <button type="button" className="admin-outline-action" disabled={busy} onClick={() => saveSetting('playback.prefer_direct',preferDirect)}>Salvar</button>
+          <div className="yf-admin__setting">
+            <div><h3>Priorizar Direct Play</h3><p>Evitar transcode quando o dispositivo for compatível.</p></div>
+            <div className="yf-admin__setting-action">
+              <label className="yf-admin__toggle"><input type="checkbox" checked={preferDirect} onChange={event => setPreferDirect(event.target.checked)}/>
+                <span>{preferDirect ? 'Ativado' : 'Desativado'}</span></label>
+              <button type="button" disabled={busy} onClick={() => saveSetting('playback.prefer_direct',preferDirect)}>Salvar</button>
             </div>
           </div>
         </section>}
-        {notice && <p className="admin-notice" role="status">{notice}</p>}
-        {error && <p className="form-alert" role="alert">{error}</p>}
+
+        {notice && <p role="status" className="yf-admin__notice">{notice}</p>}
+        {error && <p role="alert" className="yf-alert">{error}</p>}
       </main>
-      <footer className="admin-footer">YuFlix · I Watch What I Want.</footer>
     </div>
   </div>
 }

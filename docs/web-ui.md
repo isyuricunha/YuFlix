@@ -19,7 +19,7 @@ There are no fabricated movie posters, pretend playable controls, fake libraries
 ## Visual standards
 
 - Import YuTheme tokens exclusively for color decisions. AMOLED theme is the UI baseline.
-- Use locally bundled DM Sans Variable and Instrument Serif for an editorial, cinema-inspired identity.
+- Use locally bundled DM Sans Variable for an editorial, cinema-inspired identity.
 - Do not load Google Fonts, external image CDNs, or remote CSS at runtime.
 - Screen reader headings, semantic forms, visible focus, adaptive mobile layout and reduced-motion support are required.
 - Administration is visually and functionally separate from personal browsing.
@@ -27,3 +27,18 @@ There are no fabricated movie posters, pretend playable controls, fake libraries
 ## Quality
 
 Run pnpm test and pnpm build from the repo root. Component tests cover access guards, invalid credentials, password visibility, successful navigation, role-based access control and disabled sign-in when the origin is not authorized. These checks are not a substitute for actual browser visual review, which must be completed before claiming premium UI validation.
+
+## Apple TV-inspired direction
+
+The aesthetic is based on the general content-first approach described by Apple's Human Interface Guidelines for tvOS, not an Apple-branded clone. The reference emphasizes immersive layouts, clear navigation/focus, readable typography, restrained materials and straightforward multi-user access. The application uses its own YuFlix branding and only YuTheme color tokens.
+
+The login is a full-page, cardless layout with one large, prominent sign-in form. The home uses a floating, focus-visible navigation system and reserves cinematic hero space for actual media art. The admin uses quiet, spacious settings-like lists and never impersonates a streaming screen. Motion honors reduced-motion settings.
+
+Official references:
+
+- https://developer.apple.com/design/human-interface-guidelines/designing-for-tvos
+- https://developer.apple.com/design/human-interface-guidelines/materials
+
+Component CSS is scoped by context in apps/web/src/styles/{foundation,login,home,admin}.css.
+
+Automated headless Chromium checks covered 390px mobile, 820px tablet, 1440px desktop and 1920px TV viewports. These checked layout overflow, console/runtime errors, login focus and administration navigation with stubbed account data. Browser-only checks do not replace an actual user review on the installed device.

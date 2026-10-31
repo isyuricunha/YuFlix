@@ -6,9 +6,9 @@ import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
 
 function LoadingScreen() {
-  return <div className="opening-screen" role="status" aria-live="polite">
-    <span className="opening-screen__mark" aria-hidden="true">Y</span>
-    <span>Preparando sua experiência</span>
+  return <div className="yf-loading" role="status" aria-live="polite">
+    <span className="yf-loading__name">YuFlix</span>
+    <span className="yf-loading__detail">Preparando sua experiência</span>
   </div>
 }
 

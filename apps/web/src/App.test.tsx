@@ -68,7 +68,7 @@ describe('YuFlix authentication experience', () => {
   it('shows a dedicated sign-in screen for unauthenticated visitors', async () => {
     serve()
     route('/')
-    expect(await screen.findByRole('heading', { name: /bom ter você de volta/i })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: /bem-vindo de volta/i })).toBeTruthy()
     expect(screen.getByRole('textbox', { name: 'Usuário' })).toBeTruthy()
     expect(screen.getByLabelText('Senha')).toBeTruthy()
     expect(screen.queryByText('Contas cadastradas')).toBeNull()
@@ -78,7 +78,7 @@ describe('YuFlix authentication experience', () => {
     serve()
     const actor = userEvent.setup()
     route('/login')
-    await screen.findByRole('heading', { name: /bom ter você de volta/i })
+    await screen.findByRole('heading', { name: /bem-vindo de volta/i })
     await actor.type(screen.getByRole('textbox', { name: 'Usuário' }), 'owner')
     await actor.type(screen.getByLabelText('Senha'), 'incorrect passphrase')
     await actor.click(screen.getByRole('button', { name: 'Entrar' }))
@@ -89,7 +89,7 @@ describe('YuFlix authentication experience', () => {
     serve()
     const actor = userEvent.setup()
     route('/login')
-    await screen.findByRole('heading', { name: /bom ter você de volta/i })
+    await screen.findByRole('heading', { name: /bem-vindo de volta/i })
     const field = screen.getByLabelText('Senha') as HTMLInputElement
     await actor.type(field, 'some passphrase')
     await actor.click(screen.getByRole('button', { name: 'Mostrar senha' }))
@@ -103,7 +103,7 @@ describe('YuFlix authentication experience', () => {
     const fetcher = serve({ success: true })
     const actor = userEvent.setup()
     route('/login')
-    await screen.findByRole('heading', { name: /bom ter você de volta/i })
+    await screen.findByRole('heading', { name: /bem-vindo de volta/i })
     await actor.type(screen.getByRole('textbox', { name: 'Usuário' }), 'owner')
     await actor.type(screen.getByLabelText('Senha'), 'a secure test password')
     await actor.click(screen.getByRole('button', { name: 'Entrar' }))
@@ -124,8 +124,8 @@ describe('YuFlix authentication experience', () => {
   it('restores an existing administrator session on reload', async () => {
     serve({ session: admin })
     route('/admin')
-    expect(await screen.findByRole('heading', { name: /tudo no seu lugar/i })).toBeTruthy()
-    await waitFor(() => expect(screen.getByText('ACESSOS CADASTRADOS')).toBeTruthy())
+    expect(await screen.findByRole('heading', { name: /visão geral/i })).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('CONTAS ATIVAS')).toBeTruthy())
   })
 
   it('does not show a usable login form when the origin is not authorized', async () => {

@@ -4,61 +4,61 @@ import Brand from '../components/Brand'
 import { useAuth } from '../auth/AuthContext'
 
 export default function HomePage() {
-  const { user, logout, system } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
 
   async function signOut() {
-    setPending(true); setError('')
+    setPending(true)
+    setError('')
     try { await logout(); navigate('/login', { replace: true }) }
     catch { setError('Não foi possível encerrar a sessão. Tente novamente.') }
     finally { setPending(false) }
   }
 
-  return <div className="app-page">
-    <header className="app-header">
-      <div className="app-header__left">
-        <Brand compact />
-        <nav aria-label="Principal" className="app-nav">
-          <Link to="/" aria-current="page">Início</Link>
-          {user?.role === 'admin' && <Link to="/admin">Administração</Link>}
-        </nav>
-      </div>
-      <div className="app-header__right">
-        <span className="user-avatar" aria-hidden="true">{user?.username.slice(0, 1).toUpperCase()}</span>
-        <span className="app-header__username">{user?.username}</span>
-        <button className="app-signout" type="button" disabled={pending} onClick={signOut}>Sair</button>
+  return <div className="yf-app">
+    <header className="yf-app__header">
+      <Brand compact />
+      <nav className="yf-app__nav" aria-label="Principal">
+        <Link to="/" aria-current="page">Início</Link>
+        {user?.role === 'admin' && <Link to="/admin">Ajustes</Link>}
+      </nav>
+      <div className="yf-app__profile">
+        <span className="yf-avatar" aria-hidden="true">{user?.username.slice(0,1).toUpperCase()}</span>
+        <span className="yf-app__username">{user?.username}</span>
+        <button type="button" onClick={signOut} disabled={pending} className="yf-app__logout">Sair</button>
       </div>
     </header>
-    <main>
-      <section className="home-feature">
-        <div className="home-feature__rail"><span className="small-caps">YUFLIX ORIGINAL EXPERIENCE</span><span>001</span></div>
-        <div className="home-feature__art" aria-hidden="true"><span>Y</span></div>
-        <div className="home-feature__content">
-          <p className="story-overline"><span /> SEU ESPAÇO DE ENTRETENIMENTO</p>
-          <h1 aria-label="Seu streaming. Seu jeito.">Seu streaming.<br /><em>Seu jeito.</em></h1>
-          <p>Uma biblioteca feita para você. Estamos construindo os primeiros recursos para reunir seus filmes, séries e animes.</p>
-          {user?.role === 'admin'
-            ? <Link className="primary-link" to="/admin">Abrir administração <span aria-hidden="true">→</span></Link>
-            : <span className="home-feature__coming">O catálogo estará disponível em breve.</span>}
+    <main className="yf-app__main">
+      <section className="yf-feature" aria-labelledby="feature-title">
+        <div className="yf-feature__spotlight" aria-hidden="true" />
+        <div className="yf-feature__copy">
+          <span className="yf-feature__eyebrow">YUFLIX · I WATCH WHAT I WANT.</span>
+          <h1 id="feature-title">Seu streaming.<br /><span>Seu jeito.</span></h1>
+          <p>Aqui, o que assistir é decisão sua. Estamos preparando a biblioteca e os recursos de reprodução.</p>
+          {user?.role === 'admin' ? <Link className="yf-feature__action" to="/admin">Abrir ajustes <span aria-hidden="true">→</span></Link> :
+            <span className="yf-feature__status">O catálogo ainda está sendo preparado.</span>}
         </div>
-        <span className="home-feature__index" aria-hidden="true">I WATCH WHAT I WANT.</span>
+        <span className="yf-feature__signature" aria-hidden="true">YUFLIX</span>
       </section>
 
-      <section className="library-empty" aria-labelledby="empty-title">
-        <div className="library-empty__header"><div><p className="eyebrow">SUA BIBLIOTECA</p><h2 id="empty-title">O melhor ainda está por vir.</h2></div>
-          <span className="library-empty__state">EM PREPARAÇÃO</span></div>
-        <div className="library-empty__body">
-          <div className="library-empty__icon" aria-hidden="true"><span className="play-symbol" /></div>
-          <div><h3>A biblioteca está sendo preparada.</h3>
-            <p>Os catálogos e a reprodução ainda não foram habilitados. Nenhum título ou fonte será exibido como disponível sem passar pelos testes de reprodução.</p>
-            {user?.role === 'admin' && <Link to="/admin">Gerenciar contas e preferências <span aria-hidden="true">→</span></Link>}
+      <section className="yf-library" aria-labelledby="library-title">
+        <div className="yf-library__heading">
+          <div><span className="yf-kicker">SUA BIBLIOTECA</span><h2 id="library-title">Tudo em um lugar.</h2></div>
+          <span className="yf-library__phase">Em preparação</span>
+        </div>
+        <div className="yf-library__empty">
+          <div className="yf-library__glyph" aria-hidden="true"><span>▶</span></div>
+          <div className="yf-library__message">
+            <h3>A biblioteca está a caminho.</h3>
+            <p>Os catálogos ainda não estão conectados. Filmes e episódios só aparecerão aqui quando houver fontes reais disponíveis.</p>
           </div>
+          {user?.role === 'admin' && <Link to="/admin">Gerenciar <span aria-hidden="true">→</span></Link>}
         </div>
       </section>
     </main>
-    {error && <p className="form-alert footer-alert" role="alert">{error}</p>}
-    <footer className="app-footer"><span>YuFlix · I Watch What I Want.</span><span>{system?.databaseReady ? 'Sua conta está ativa' : 'Conexão em preparação'}</span></footer>
+    {error && <p className="yf-alert yf-app__alert" role="alert">{error}</p>}
+    <footer className="yf-app__footer"><span>YuFlix</span><span>I Watch What I Want.</span></footer>
   </div>
 }

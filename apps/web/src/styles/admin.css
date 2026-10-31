@@ -1,0 +1,89 @@
+/* Settings-like admin layout; quiet and functional. */
+.yf-admin { min-height:100svh; display:flex; flex-direction:column; }
+.yf-admin__topbar { display:flex; align-items:center; gap:35px; min-height:84px; padding:20px clamp(25px,4vw,65px); border-bottom:1px solid var(--yu-bg-surface-active); }
+.yf-admin__back { margin-left:18px; text-decoration:none; color:var(--text-secondary); font-size:13px; }
+.yf-admin__back:hover { color:var(--text-primary); }
+.yf-admin__account { display:flex; align-items:center; gap:12px; margin-left:auto; color:var(--text-secondary); font-size:13px; }
+.yf-admin__signout { background:transparent; border:0; color:var(--text-secondary); font-size:12px; padding:9px; }
+.yf-admin__signout:hover { color:var(--text-primary); }
+.yf-admin__layout { display:grid; grid-template-columns:255px minmax(0,1fr); flex:1; }
+.yf-admin__sidebar { padding:55px 20px 30px clamp(25px,4vw,65px); border-right:1px solid var(--yu-bg-surface-active); }
+.yf-admin__nav { display:flex; flex-direction:column; gap:5px; margin:22px -7px 0; }
+.yf-admin__nav button { text-align:left; background:transparent; color:var(--text-secondary); font-size:14px; padding:13px 16px; border:0; border-radius:11px; font-weight:580; }
+.yf-admin__nav button:hover { color:var(--text-primary); background:var(--yu-bg-surface); }
+.yf-admin__nav button.is-active { background:var(--yu-bg-surface-active); color:var(--text-primary); font-weight:720; }
+.yf-admin__content { width:min(100%,1180px); padding:57px clamp(32px,5.5vw,95px) 110px; }
+.yf-admin__heading h1 { margin:12px 0; font-size:clamp(44px,4.5vw,66px); font-weight:700; letter-spacing:-.065em; line-height:1.1; }
+.yf-admin__heading p { color:var(--text-secondary); font-size:15px; line-height:1.7; margin:0; }
+.yf-admin__loading,.yf-admin__muted { color:var(--text-secondary); font-size:13px; line-height:1.75; }
+.yf-admin__overview { margin-top:60px; }
+.yf-admin__summary { padding:33px 35px; border-radius:18px; background:var(--yu-bg-surface); }
+.yf-admin__summary>div { display:flex; align-items:baseline; gap:14px; margin-top:9px; }
+.yf-admin__summary strong { font-size:58px; font-weight:730; letter-spacing:-.07em; }
+.yf-admin__summary>div span { color:var(--text-secondary); font-size:14px; }
+.yf-admin__summary-list { margin-top:36px; }
+.yf-admin__summary-list>div { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:23px 5px; border-bottom:1px solid var(--yu-bg-surface-active); }
+.yf-admin__summary-list h2 { margin:0 0 6px; font-size:17px; font-weight:690; }
+.yf-admin__summary-list p { color:var(--text-secondary); margin:0; font-size:13px; }
+.yf-admin__summary-list button { padding:12px; background:transparent; border:0; color:var(--text-primary); font-weight:700; font-size:13px; white-space:nowrap; }
+.yf-admin__summary-list button:hover { color:var(--accent-gold); }
+.yf-admin__summary-list button span { padding-left:10px; }
+.yf-admin__unavailable { color:var(--text-tertiary); font-size:12px; white-space:nowrap; }
+.yf-admin__users { display:grid; grid-template-columns:minmax(0,1fr) minmax(310px,.9fr); gap:50px; margin-top:60px; }
+.yf-admin__section-title { display:flex; align-items:center; justify-content:space-between; gap:20px; padding-bottom:18px; border-bottom:1px solid var(--yu-bg-surface-active); }
+.yf-admin__section-title h2,.yf-admin__new-user h2,.yf-admin__preferences h2 { font-size:22px; letter-spacing:-.035em; font-weight:690; margin:0; }
+.yf-admin__section-title span { color:var(--text-tertiary); font-size:13px; }
+.yf-admin__user { display:flex; align-items:center; gap:13px; padding:18px 0; border-bottom:1px solid var(--yu-bg-surface-active); }
+.yf-admin__user>div { display:flex; flex-direction:column; gap:5px; min-width:0; flex:1; }
+.yf-admin__user strong { color:var(--text-primary); font-size:13px; font-weight:650; overflow-wrap:anywhere; }
+.yf-admin__user small { color:var(--text-tertiary); font-size:11px; }
+.yf-admin__user>span:last-child { font-size:12px; color:var(--text-secondary); white-space:nowrap; }
+.yf-admin__new-user { padding:28px; border-radius:18px; background:var(--yu-bg-surface); }
+.yf-admin__new-user>p { color:var(--text-secondary); font-size:13px; line-height:1.65; }
+.yf-admin__form { display:flex; flex-direction:column; gap:11px; margin-top:26px; }
+.yf-admin__form label { font-size:12px; font-weight:650; color:var(--text-primary); }
+.yf-admin__form input,.yf-admin__form select,.yf-admin__setting select { width:100%; min-height:46px; border-radius:10px; border:1px solid var(--yu-bg-surface-active); background:var(--yu-bg-input); color:var(--text-primary); padding:0 14px; font-size:14px; margin-bottom:9px; }
+.yf-admin__form input::placeholder { color:var(--text-tertiary); }
+.yf-admin__primary { min-height:47px; margin-top:11px; border-radius:10px; border:0; color:var(--text-inverse); background:var(--text-primary); font-weight:730; }
+.yf-admin__primary:hover { opacity:.88; }
+.yf-admin__preferences { margin-top:58px; }
+.yf-admin__preferences>.yf-admin__muted { max-width:640px; margin:12px 0 28px; }
+.yf-admin__setting { display:flex; align-items:center; justify-content:space-between; gap:25px; padding:30px 4px; border-bottom:1px solid var(--yu-bg-surface-active); }
+.yf-admin__setting h3 { font-weight:680; font-size:15px; margin:0 0 7px; }
+.yf-admin__setting p { color:var(--text-secondary); font-size:13px; margin:0; line-height:1.6; }
+.yf-admin__setting-action { min-width:310px; display:flex; align-items:center; gap:11px; }
+.yf-admin__setting-action select { flex:1; margin:0; }
+.yf-admin__setting-action button { min-height:45px; padding:0 18px; background:var(--yu-bg-surface-raised); border:1px solid var(--yu-bg-surface-active); border-radius:10px; color:var(--text-primary); font-weight:650; font-size:12px; }
+.yf-admin__setting-action button:hover { background:var(--yu-bg-surface-active); }
+.yf-admin__toggle { display:flex; align-items:center; gap:12px; color:var(--text-secondary); flex:1; font-size:13px; }
+.yf-admin__toggle input { width:18px; height:18px; accent-color:var(--accent-gold); }
+.yf-admin__notice { border-radius:11px; background:var(--yu-bg-surface); padding:16px; color:var(--text-primary); font-size:13px; margin-top:35px; }
+@media(max-width:1050px) {
+  .yf-admin__layout { grid-template-columns:210px minmax(0,1fr); }
+  .yf-admin__sidebar { padding-left:24px; }
+  .yf-admin__content { padding-left:45px; padding-right:45px; }
+  .yf-admin__users { grid-template-columns:1fr; gap:45px; }
+}
+@media(max-width:750px) {
+  .yf-admin__topbar { padding:19px 24px; gap:20px; min-height:75px; }
+  .yf-admin__back { display:none; }
+  .yf-admin__account>span:not(.yf-avatar) { display:none; }
+  .yf-admin__layout { display:flex; flex-direction:column; }
+  .yf-admin__sidebar { padding:20px 24px 12px; border:0; border-bottom:1px solid var(--yu-bg-surface-active); }
+  .yf-admin__sidebar>.yf-kicker { display:none; }
+  .yf-admin__nav { flex-direction:row; gap:7px; margin:0; overflow-x:auto; }
+  .yf-admin__nav button { flex-shrink:0; white-space:nowrap; padding:11px 15px; }
+  .yf-admin__content { width:100%; padding:45px 27px 80px; }
+  .yf-admin__heading h1 { font-size:45px; }
+  .yf-admin__overview,.yf-admin__users { margin-top:38px; }
+  .yf-admin__users { grid-template-columns:1fr; }
+  .yf-admin__new-user { padding:25px; }
+  .yf-admin__setting { align-items:stretch; flex-direction:column; gap:20px; }
+  .yf-admin__setting-action { min-width:0; }
+}
+@media(max-width:410px) {
+  .yf-admin__content { padding-left:21px; padding-right:21px; }
+  .yf-admin__new-user { padding:20px; }
+  .yf-admin__heading h1 { font-size:40px; }
+  .yf-admin__setting-action { flex-wrap:wrap; }
+}

@@ -11,6 +11,5 @@ Other runtime components, including React, Vite, Go chi and Caddy, retain their 
 ## Self-hosted web fonts
 
 - DM Sans, delivered via @fontsource-variable/dm-sans, SIL Open Font License 1.1.
-- Instrument Serif, delivered via @fontsource/instrument-serif, SIL Open Font License 1.1.
 
 Font files are bundled into the web build and served by the same origin; no external font CDN is required at runtime. Original font licenses are retained in their respective upstream packages.
