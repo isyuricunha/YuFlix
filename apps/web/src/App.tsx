@@ -1,106 +1,41 @@
-import { useEffect, useState } from 'react'
-import AccountPanel from './AccountPanel'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
+import type { ReactNode } from 'react'
+import { AuthProvider, useAuth } from './auth/AuthContext'
+import LoginPage from './pages/LoginPage'
+import HomePage from './pages/HomePage'
+import AdminPage from './pages/AdminPage'
 
-type SystemInfo = {
-  name: string
-  slogan: string
-  apiVersion: string
-  phase: 'foundation'
-  playbackReady: boolean
-  databaseReady: boolean
-  authenticationReady: boolean
+function LoadingScreen() {
+  return <div className="opening-screen" role="status" aria-live="polite">
+    <span className="opening-screen__mark" aria-hidden="true">Y</span>
+    <span>Preparando sua experiência</span>
+  </div>
 }
 
-type State =
-  | { kind: 'loading' }
-  | { kind: 'connected'; data: SystemInfo }
-  | { kind: 'unavailable' }
+function RequireUser({ children, admin = false }: { children: ReactNode; admin?: boolean }) {
+  const { state, user } = useAuth()
+  const location = useLocation()
+
+  if (state === 'checking') return <LoadingScreen />
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (admin && user.role !== 'admin') return <Navigate to="/" replace />
+  return children
+}
+
+function GuestOnly({ children }: { children: ReactNode }) {
+  const { state, user } = useAuth()
+  if (state === 'checking') return <LoadingScreen />
+  if (user) return <Navigate to="/" replace />
+  return children
+}
 
 export default function App() {
-  const [system, setSystem] = useState<State>({ kind: 'loading' })
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/v1/system/info', { signal: controller.signal, cache: 'no-store' })
-      .then((response) => {
-        if (!response.ok) throw new Error('Core unavailable')
-        return response.json() as Promise<SystemInfo>
-      })
-      .then((data) => {
-        if (!controller.signal.aborted) setSystem({ kind: 'connected', data })
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setSystem({ kind: 'unavailable' })
-      })
-    return () => controller.abort()
-  }, [])
-
-  const available = system.kind === 'connected'
-  return (
-    <div className="shell">
-      <header className="masthead" aria-label="Barra principal">
-        <a className="brand" href="/" aria-label="YuFlix, início">
-          <span className="brand-symbol" aria-hidden="true">Y</span>
-          <span>YuFlix</span>
-        </a>
-        <span className="build-stage">FUNDAÇÃO / 001</span>
-      </header>
-
-      <main>
-        <section className="hero" aria-labelledby="hero-heading">
-          <div className="hero-label"><span className="accent-line" /> UMA NOVA FORMA DE ASSISTIR</div>
-          <h1 id="hero-heading">
-            I Watch<br />
-            <span>What I Want.</span>
-          </h1>
-          <p className="hero-description">
-            Seu catálogo. Suas fontes. Seu ritmo.
-            Uma experiência de streaming independente, construída para reproduzir bem.
-          </p>
-          <div className="hero-footnote">
-            <span className="line" />
-            <span>YuFlix / Em desenvolvimento</span>
-          </div>
-          <div className="hero-mark" aria-hidden="true">Y</div>
-        </section>
-
-        <section className="status-section" aria-labelledby="system-heading">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">01 / STATUS DA PLATAFORMA</span>
-              <h2 id="system-heading">Sistema</h2>
-            </div>
-            <span className={'connection-state ' + (available ? 'online' : '')} role="status">
-              <span className="indicator" />
-              {available ? 'CORE CONECTADO' : system.kind === 'loading' ? 'CONECTANDO' : 'INDISPONÍVEL'}
-            </span>
-          </div>
-          <div className="status-details">
-            <div className="detail">
-              <span>API</span>
-              <strong>{available ? system.data.apiVersion.toUpperCase() : '...'}</strong>
-            </div>
-            <div className="detail">
-              <span>Banco de dados</span>
-              <strong>{available && system.data.databaseReady ? 'Conectado' : 'Aguardando configuração'}</strong>
-            </div>
-            <div className="detail">
-              <span>Reprodução</span>
-              <strong>{available && system.data.playbackReady ? 'Disponível' : 'Em desenvolvimento'}</strong>
-            </div>
-          </div>
-          <p className="status-note">
-            A estrutura inicial já permite verificar a comunicação entre o navegador e o Core.
-            O player e os catálogos só serão disponibilizados após testes reais.
-          </p>
-        </section>
-        <AccountPanel enabled={available && system.data.authenticationReady} databaseReady={available && system.data.databaseReady} />
-      </main>
-      <footer className="footer">
-        <span>YUFLIX</span>
-        <span>I WATCH WHAT I WANT.</span>
-        <a href="https://github.com/isyuricunha/YuFlix" rel="noopener noreferrer" target="_blank">Código-fonte</a>
-      </footer>
-    </div>
-  )
+  return <AuthProvider>
+    <Routes>
+      <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
+      <Route path="/" element={<RequireUser><HomePage /></RequireUser>} />
+      <Route path="/admin" element={<RequireUser admin><AdminPage /></RequireUser>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  </AuthProvider>
 }

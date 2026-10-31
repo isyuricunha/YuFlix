@@ -40,3 +40,7 @@ No milestone is complete until its specific tests pass.
 YuFlix supports HTTPS and explicitly opted-in HTTP access. Approved origins are exact, installation-specific strings, and the Core never derives trust from an arbitrary request Host. Sessions are bound to the HTTP or HTTPS transport and use separate cookies. HTTPS retains secure __Host-prefixed cookies. HTTP lacks confidentiality and must be limited to trusted networks.
 
 The bundled Core trusts X-Forwarded-Proto only from its private Caddy gateway, which overwrites the header. Native Core deployments default to interpreting direct requests as HTTP unless TLS is terminated by the process. Custom reverse proxy configurations require a validated trusted proxy boundary.
+
+## Current user experience
+
+React Router supplies three real route boundaries: public login, authenticated home and admin-only configuration. The legacy combined diagnostic page and login form have been replaced. The app restores sessions from the backend and never stores session tokens or user passwords in browser storage. The authenticated home does not claim media playback capability. Details are in docs/web-ui.md.

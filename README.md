@@ -4,7 +4,7 @@
 
 YuFlix is an independent, self-hosted streaming platform for movies, series, anime, and IPTV. Built for shared sources with independent accounts, Portuguese (Brazil) first, and a media engine that prefers Direct Play over unnecessary transcoding.
 
-> **Early foundation.** This repository currently provides a versioned HTTP API, a web shell, PostgreSQL-backed account foundations, and a tested playback decision model. It does not yet stream or transcode media. Do not use it as a Jellyfin replacement.
+> **Early foundation.** This repository currently provides a versioned HTTP API, a dedicated login and authenticated web navigation, PostgreSQL-backed account foundations, and a tested playback decision model. It does not yet stream or transcode media. Do not use it as a Jellyfin replacement.
 
 ## Technology
 
@@ -40,7 +40,7 @@ Production build:
 
     docker compose up -d --build
 
-The web interface binds to 0.0.0.0:62471 by default. Firewall and DNS remain under installation control. The account API is disabled until PostgreSQL and an approved origin are configured. HTTPS is recommended; explicit opt-in HTTP is supported for trusted local installations. HTTP sends passwords and cookies in cleartext.
+The web interface binds to 0.0.0.0:62471 by default. Open /login to sign in; the root route redirects visitors without sessions to the sign-in screen. Firewall and DNS remain under installation control. The account API is disabled until PostgreSQL and an approved origin are configured. HTTPS is recommended; explicit opt-in HTTP is supported for trusted local installations. HTTP sends passwords and cookies in cleartext.
 
 For database credentials, first-admin creation and HTTP/HTTPS configuration see [docs/database.md](docs/database.md).
 
@@ -65,7 +65,8 @@ Check:
 - [Architecture and milestone boundaries](docs/architecture.md)
 - [Playback acceptance criteria](docs/playback.md)
 - [OpenAPI v1 contract](api/openapi.yaml)
-- [PostgreSQL and secure HTTPS activation](docs/database.md)
+- [PostgreSQL and HTTP/HTTPS activation](docs/database.md)
+- [Web UX and login flow](docs/web-ui.md)
 
 This repository intentionally contains no infrastructure-specific hostnames, IPs, credentials, or environment dumps.
 
