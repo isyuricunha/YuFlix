@@ -39,6 +39,7 @@ func (d *Direct) Probe(ctx context.Context, u string) error {
 		return ErrUnsafeStream
 	}
 	req.Header.Set("Range", "bytes=0-1023")
+	req.Header.Set("User-Agent", "YuFlix/1.0")
 	req.Header.Set("Accept-Encoding", "identity")
 	resp, err := d.HTTP.Do(req)
 	if err != nil {
@@ -79,6 +80,7 @@ func (d *Direct) Relay(w http.ResponseWriter, r *http.Request, u string) {
 		return
 	}
 	upstream.Header.Set("Accept-Encoding", "identity")
+	upstream.Header.Set("User-Agent", "YuFlix/1.0")
 	if rng != "" {
 		upstream.Header.Set("Range", rng)
 	}

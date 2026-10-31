@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -146,5 +147,35 @@ func TestDetailedStreamStatusSeparatesUnsupportedFromAbsent(t *testing.T) {
 	}
 	if result.Received != 3 || result.Unsupported != 2 || len(result.Streams) != 1 {
 		t.Fatalf("incorrect source accounting: %+v", result)
+	}
+}
+
+func TestPublicMediaRedirectsWithoutInternalNetworks(t *testing.T) {
+	accepted := []string{
+		"http://cdn.example.com:8080/file.mp4",
+		"http://cdn.example.com/video.mp4",
+		"https://cdn.example.com/video.mp4",
+	}
+	for _, raw := range accepted {
+		u, err := url.Parse(raw)
+		if err != nil || !SafeMediaRedirect(u) {
+			t.Errorf("public media redirect rejected")
+		}
+	}
+	rejected := []string{
+		"file:///etc/passwd",
+		"http://127.0.0.1/video.mp4",
+		"http://localhost/video.mp4",
+		"http://media.local/video.mp4",
+		"http://user:password@cdn.example.com/file.mp4",
+		"http://cdn.example.com:99999/file.mp4",
+		"http://cdn.example.com:8080/../secret",
+		"http://cdn.example.com/file.mp4#fragment",
+	}
+	for _, raw := range rejected {
+		u, err := url.Parse(raw)
+		if err == nil && SafeMediaRedirect(u) {
+			t.Errorf("unsafe redirect accepted")
+		}
 	}
 }

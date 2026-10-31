@@ -90,3 +90,19 @@ restricted CPU/RAM, no persistent state, and returns only candidates to the
 private Core over Tailscale encryption. If egress is not configured, YuFlix
 behaves exactly as before. The relay should never be published on a public
 network interface.
+
+### Provider-owned media redirects
+
+A public HTTPS MP4 source may return a 30x redirect to a public HTTP video
+endpoint, including a nonstandard destination port. YuFlix can follow these
+media redirects only after revalidating the destination hostname and resolving
+all DNS results to public IP addresses. Private IP destinations, redirects
+with user credentials, localhost/special-use names and excessive redirect
+chains remain blocked. Credentials, user cookies and addon manifest settings
+are never forwarded as request headers.
+
+The HTTP leg from the egress host to the media CDN is **not encrypted**.
+Operators should prefer HTTPS media providers where available. This is distinct
+from encrypted Tailscale communication between YuFlix Core and an optional
+egress host. Browser requests still use the installation's configured
+HTTP/HTTPS origin.
