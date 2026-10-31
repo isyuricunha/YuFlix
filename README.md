@@ -79,3 +79,4 @@ YuFlix is licensed under [AGPL-3.0-only](LICENSE). See [third-party notices](THI
 
 - [Media Engine first playback milestone](docs/media-engine.md)
 - [Safe local FFprobe and HLS command planning](docs/media-probe-planning.md)
+- [HLS cache policy, RAM/disk limits and lifecycle](docs/media-cache.md)

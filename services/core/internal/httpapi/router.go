@@ -85,6 +85,8 @@ func NewRouter(options ...Options) http.Handler {
 					r.Delete("/catalog/sources/{sourceID}", a.deleteCatalogSource)
 					r.Put("/catalog/sources/{sourceID}/cache", a.updateCatalogCacheMode)
 					r.Put("/catalog/cache", a.updateAllCatalogCacheModes)
+					r.Get("/media/cache", a.getMediaCachePolicy)
+					r.Put("/media/cache", a.putMediaCachePolicy)
 					r.Get("/media/addons", a.listStreamAddons)
 					r.Get("/media/streams", a.listMediaStreams)
 					r.Post("/media/sessions", a.startMediaSession)

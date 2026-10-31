@@ -59,3 +59,5 @@ Primary references:
 - https://ffmpeg.org/ffprobe.html
 - https://ffmpeg.org/ffmpeg-formats.html#hls-2
 - https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats
+
+The local-only HLS worker now has a bounded cache policy, real-time FFmpeg pacing, per-session cleanup, cancellation, orphan cleanup and manual/automatic RAM/disk budgets. This is not a publicly accessible player endpoint or an enabled worker service. See [HLS cache policy](media-cache.md).

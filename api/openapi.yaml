@@ -124,6 +124,45 @@ paths:
         '401': {description: Login required}
         '404': {description: Ticket invalid or belongs to another user}
         '416': {description: Invalid or multiple byte ranges}
+  /admin/media/cache:
+    get:
+      summary: Read effective default and saved HLS cache configuration (admin)
+      description: >
+        Reports active=false until a validated isolated worker has been
+        connected to the playback engine. Settings are never confused
+        with the persistent metadata catalog cache.
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Saved policy, defaults, and actual worker activation status}
+        '403': {description: Administrator required}
+    put:
+      summary: Save bounded HLS storage and cleanup policy (admin)
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [policy]
+              additionalProperties: false
+              properties:
+                policy:
+                  type: object
+                  additionalProperties: false
+                  required: [mode, storage, maxMiB, maxConcurrent, segmentSeconds, idleSeconds, cleanupGraceSeconds]
+                  properties:
+                    mode: {type: string, enum: [automatic, manual]}
+                    storage: {type: string, enum: [ram, disk]}
+                    maxMiB: {type: integer, minimum: 64, maximum: 4096}
+                    maxConcurrent: {type: integer, minimum: 1, maximum: 4}
+                    segmentSeconds: {type: integer, minimum: 2, maximum: 10}
+                    idleSeconds: {type: integer, minimum: 30, maximum: 600}
+                    cleanupGraceSeconds: {type: integer, minimum: 0, maximum: 180}
+      responses:
+        '200': {description: Policy persisted; does not imply transcoding is active}
+        '400': {description: Invalid or unsafe settings}
+        '403': {description: Administrator required}
   /admin/media/addons:
     get:
       summary: Administrator-only list of stream addons and source policies
