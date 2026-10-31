@@ -29,8 +29,9 @@ var catalogProviders = []catalogProvider{
 		manifestURL: "https://7a82163c306e-stremio-netflix-catalog-addon.baby-beamup.club/manifest.json"},
 	{ID: "anime-kitsu", Name: "Anime Kitsu", Description: "Animes em alta, em exibição e populares.", Category: "Animes", Ready: true,
 		manifestURL: "https://anime-kitsu.strem.fun/manifest.json"},
-	{ID: "anime-catalogs", Name: "Anime Catalogs", Description: "Catálogos MyAnimeList, AniDB, AniList e Kitsu.", Category: "Animes",
-		Note: "O provedor exige configuração antes de expor catálogos. Integração nativa em preparação."},
+	{ID: "anime-catalogs", Name: "Anime Catalogs", Description: "Animes em alta, em exibição e populares de MyAnimeList, AniList e Kitsu.", Category: "Animes", Ready: true,
+		manifestURL: "https://1fe84bc728af-stremio-anime-catalogs.baby-beamup.club/" +
+			url.PathEscape(`{"search":"on","myanimelist_top-airing":"on","anilist_trending-now":"on","anilist_popular-this-season":"on","kitsu_top-airing":"on"}`) + "/manifest.json"},
 	{ID: "tmdb-collections", Name: "TMDB Collections", Description: "Franquias de filmes e coleções cinematográficas.", Category: "Coleções", Ready: true,
 		manifestURL: "https://61ab9c85a149-tmdb-collections.baby-beamup.club/" + url.PathEscape(`{"language":"pt-BR","catalogList":["popular","topRated","newReleases"]}`) + "/manifest.json"},
 }

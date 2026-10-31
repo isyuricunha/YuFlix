@@ -13,7 +13,7 @@ the source in PostgreSQL 17. Manifest endpoints are never exposed to viewers.
 | Streaming Catalogs | Ready | Catalogs per streaming service, independent of the service's playback or a user subscription. Does not imply that a stream exists. |
 | Anime Kitsu | Ready | Anime catalogs of popular, airing and trending series. Kitsu anime catalogs often return `series` entries, now accepted by the YuFlix catalog pipeline. Some stream addons do not support Kitsu IDs. |
 | TMDB Collections | Ready | Preconfigured PT-BR collection browsing with popular, top-rated and new-release franchises. A collection contains film entries, not a playable movie by itself. |
-| Anime Catalogs | Pending | The upstream public manifest has zero catalogs until separately configured. The gallery refuses to install an empty provider. |
+| Anime Catalogs | Ready | Server-side preset with MyAnimeList top airing, AniList trending/seasonal and Kitsu top airing. The public default manifest is empty, so the provider is installed with verified non-secret configuration. |
 
 **The Movie Database** is a *third-party TMDb-backed metadata addon*. A
 separate direct integration using TMDb's official API and protected API token

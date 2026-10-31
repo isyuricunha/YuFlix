@@ -23,7 +23,7 @@ func TestCatalogProviderPresetsAreReviewedAndSafe(t *testing.T) {
 			t.Fatalf("unavailable provider URL must not be exposed: %s", provider.ID)
 		}
 	}
-	if ready != 4 || !seen["anime-catalogs"] || !seen["tmdb-collections"] {
+	if ready != 5 || !seen["anime-catalogs"] || !seen["tmdb-collections"] {
 		t.Fatalf("expected reviewed metadata, streaming, anime, collections providers")
 	}
 }
