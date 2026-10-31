@@ -122,6 +122,31 @@ func (d *DB) Migrate(ctx context.Context) error {
 	return tx.Commit(ctx)
 }
 
+// Status is read-only and deliberately excludes connection URLs and credentials.
+type Status struct {
+	DatabaseIsYuFlix bool
+	ServerMajor      int
+	Superuser        bool
+	PublicTables     int
+	SchemaReady      bool
+}
+
+func (d *DB) Inspect(ctx context.Context) (Status, error) {
+	var status Status
+	var serverVersion int
+	err := d.pool.QueryRow(ctx, `SELECT current_database() = 'yuflix',
+        current_setting('server_version_num')::integer,
+        coalesce((SELECT rolsuper FROM pg_roles WHERE rolname=current_user), true),
+        (SELECT count(*)::integer FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE')`).
+		Scan(&status.DatabaseIsYuFlix, &serverVersion, &status.Superuser, &status.PublicTables)
+	if err != nil {
+		return Status{}, errors.New("cannot inspect target database")
+	}
+	status.ServerMajor = serverVersion / 10000
+	status.SchemaReady = d.SchemaReady(ctx)
+	return status, nil
+}
+
 func (d *DB) SchemaReady(ctx context.Context) bool {
 	var v int
 	return d.pool.QueryRow(ctx, "SELECT max(version) FROM schema_migrations").Scan(&v) == nil && v >= 2

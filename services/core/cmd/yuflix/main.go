@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 1 && (os.Args[1] == "migrate" || os.Args[1] == "bootstrap-admin") {
+	if len(os.Args) > 1 && (os.Args[1] == "migrate" || os.Args[1] == "bootstrap-admin" || os.Args[1] == "db-check") {
 		if err := runAdminCommand(); err != nil {
 			fmt.Fprintln(os.Stderr, "operation failed:", err)
 			os.Exit(1)
@@ -126,7 +126,27 @@ func runAdminCommand() error {
 		return err
 	}
 	defer d.Close()
+	if os.Args[1] != "db-check" {
+		status, err := d.Inspect(ctx)
+		if err != nil {
+			return err
+		}
+		if !status.DatabaseIsYuFlix || status.ServerMajor != 17 || status.Superuser {
+			return fmt.Errorf("refusing changes: dedicated yuflix PostgreSQL 17 non-superuser role required")
+		}
+	}
 	switch os.Args[1] {
+	case "db-check":
+		status, err := d.Inspect(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("connection=ok database_is_yuflix=%t postgres_major=%d superuser=%t public_tables=%d schema_ready=%t\n",
+			status.DatabaseIsYuFlix, status.ServerMajor, status.Superuser, status.PublicTables, status.SchemaReady)
+		if !status.DatabaseIsYuFlix || status.ServerMajor != 17 || status.Superuser {
+			return fmt.Errorf("database target failed the YuFlix safety checks")
+		}
+		return nil
 	case "migrate":
 		if err = d.Migrate(ctx); err != nil {
 			return err

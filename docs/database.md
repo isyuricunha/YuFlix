@@ -4,9 +4,9 @@ The public YuFlix page works without PostgreSQL. Login, sessions and administrat
 
 ## Dedicated database
 
-Create a dedicated PostgreSQL 17 database and a role with the same name, using a PostgreSQL administrator:
+Create a dedicated PostgreSQL 17 database and a non-superuser role with the same name, using a PostgreSQL administrator:
 
-    CREATE ROLE yuflix LOGIN;
+    CREATE ROLE yuflix LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION;
     CREATE DATABASE yuflix OWNER yuflix;
 
 From psql, assign its password interactively using the psql meta-command: backslash-password followed by yuflix. Do not put the password in shell history, code, logs or screenshots. Use an isolated database; never reuse an unrelated application's database or superuser.
@@ -34,6 +34,22 @@ The HTTPS login cookie has the __Host- prefix, Secure, HttpOnly, SameSite=Strict
 For HTTPS behind a reverse proxy, configure TLS at the gateway. The proxy must overwrite untrusted X-Forwarded-Proto, preserve the original Host and keep Core unreachable from untrusted networks. The packaged Compose sets trusted forwarded protocol handling only because its Core service is on an isolated network behind Caddy. Adapt a custom reverse proxy with a trusted proxy boundary rather than forwarding arbitrary client-supplied X-Forwarded-* headers.
 
 Percent-encode reserved URI password characters and validate database certificates when accessing PostgreSQL remotely.
+
+## Dedicated role and Tailscale database transport
+
+The YuFlix application role must never be a PostgreSQL superuser. On a newly created database, a PostgreSQL administrator can assign ownership exclusively to that application role:
+
+    ALTER DATABASE yuflix OWNER TO yuflix;
+
+Only use this on the dedicated YuFlix database. Do not change other databases, their roles, grants, or schemas.
+
+When PostgreSQL is reached through a restricted Tailscale network, native PostgreSQL TLS is optional. The application database URL may use sslmode=disable; Tailscale/WireGuard encrypts the network path. Restrict access using Tailscale ACLs and PostgreSQL authorization. For exposed or untrusted paths, use certificate-verified TLS (sslmode=verify-full).
+
+Check the destination, PostgreSQL version, account privileges and current schema without changing the database:
+
+    docker compose run --rm --no-deps core db-check
+
+The command does not print secrets. Migration and first-admin operations refuse superuser connections or unexpected database versions/names.
 
 ## Migrations and first administrator
 
