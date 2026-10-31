@@ -1,6 +1,7 @@
 import { startTransition, useEffect, useRef, useState, ViewTransition, type Dispatch, type SetStateAction } from 'react'
 import { Link } from 'react-router'
 import { api, type CatalogSource, type CatalogDefinition, type CatalogItem } from '../api'
+import FeaturedHero from './FeaturedHero'
 
 type Shelf = { source: CatalogSource; catalog: CatalogDefinition; items: CatalogItem[]; failed?: boolean }
 type Kind = 'all' | 'movie' | 'series'
@@ -76,9 +77,11 @@ export default function CatalogHome({ isAdmin, onCatalogPresent }: { isAdmin: bo
     return () => { active = false }
   }, [onCatalogPresent])
 
-  const first = shelves.find(s => s.items.some(i => i.background))
-  const featured = first?.items.find(i => i.background)
   const visible = shelves.filter(s => kind === 'all' || s.catalog.type === kind)
+  const highlights = visible.flatMap(s => s.items.filter(item => Boolean(item.background))
+    .slice(0, 3).map(item => ({ item, source: s.source })))
+    .filter((entry, position, items) => items.findIndex(other =>
+      other.item.id === entry.item.id && other.source.id === entry.source.id) === position).slice(0, 6)
 
   if (loading) return <section className="yf-library yf-library--loading" role="status">Carregando sua biblioteca...</section>
   if (error) return <section className="yf-library" role="alert">{error}</section>
@@ -93,17 +96,7 @@ export default function CatalogHome({ isAdmin, onCatalogPresent }: { isAdmin: bo
   </section>
 
   return <div className="yf-catalog-browse">
-    {featured && first && <section className="yf-catalog-featured" aria-labelledby="featured-title">
-      {featured.background && <img className="yf-catalog-featured__backdrop" src={featured.background} alt="" referrerPolicy="no-referrer" />}
-      <div className="yf-catalog-featured__content">
-        <span className="yf-kicker">EM DESTAQUE NO CATÁLOGO</span>
-        <h2 id="featured-title">{featured.name}</h2>
-        {featured.description && <p>{featured.description}</p>}
-        <Link to={'/title/' + first.source.id + '/' + featured.type + '/' + encodeURIComponent(featured.id)}>
-          Ver detalhes <span aria-hidden="true">→</span>
-        </Link>
-      </div>
-    </section>}
+    <FeaturedHero key={kind} entries={highlights} />
     <div className="yf-catalog-toolbar">
       <div><span className="yf-kicker">ESCOLHA O QUE ASSISTIR</span><h2>Explore sua biblioteca</h2></div>
       <div className="yf-catalog-filters" role="group" aria-label="Filtrar títulos">

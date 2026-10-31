@@ -6,8 +6,8 @@ YuFlix has a native Stremio stream discovery interface and a deliberately narrow
 
 1. Administrators add a public stream addon under Administration > Reprodução. The entire configured HTTPS manifest URL is accepted, including URL-encoded configuration before /manifest.json.
 2. Visit a catalog title. For series, select a specific episode.
-3. Select Buscar fontes. Only public HTTPS MP4 sources and opaque extensionless HTTPS URLs that do not require proxy headers are shown. Extensionless candidates must pass a bounded MP4 signature and Range probe before a session is created.
-4. Select Testar Direct Play. The Core fetches a short bounded HTTP byte range, checks HTTP 206 and MP4 file signature, and creates a user-bound expiring session.
+3. Click Assistir agora. Compatible sources are discovered in limited parallel requests and evaluated privately, in administrator-configured priority order; users do not see an addon/source list.
+4. The Core probes candidate MP4 byte ranges, skipping failures before returning a scoped playback ticket. A failed browser source can request the next eligible candidate.
 5. The player accesses the Core over the existing installation origin using a temporary path and the same authenticated cookie.
 
 Stream providers are shared among users; the sessions remain scoped to each user. The manifest URL (which can contain user-specific configuration) and the original stream address, including any query-string signature, is never returned to the browser or written in normal logs.
@@ -18,13 +18,13 @@ This milestone supports only:
 - Public HTTPS URLs ending in .mp4 or .m4v, or opaque extensionless HTTPS URLs when the byte-range response is verified as MP4. A signed query string is permitted; URLs are never exposed to clients.
 - Byte-range streaming with Content-Range, HTTP 206 and seek requests.
 - Go standard library streaming relay without disk buffering, FFmpeg invocation or transcode.
-- One source selected explicitly by the user; opaque candidate bindings detect provider reordering, and failure does not delete other sources.
+- Automatic source priority and fallback for current compatible MP4 candidates. The admin-only manual discovery interface retains opaque bindings for diagnosis.
 - Concurrent verification and stream session limits; source sessions are in memory, valid up to six hours, require the creator's authenticated account and matching HTTP or HTTPS transport, and are revoked when the provider is removed.
 
 This milestone deliberately does not support:
 - HLS, DASH, MKV, torrents or providers that require custom request headers or authenticated addon manifests.
-- Full codec negotiation, FFprobe of remote sources, audio/subtitle tracks, HDR handling or transcoding.
-- Automatic failover, progress storage, TV client compatibility or per-device profiles.
+- Full codec negotiation, FFprobe of remote sources, browser audio/subtitle switching, HDR conversion or live transcoding. Internal local FFprobe and FFmpeg HLS command planning exist but are not connected to streaming routes.
+- Complete browser-level failover/resume, progress storage, TV client compatibility or per-device profiles.
 - A claim that an HTTP 206, MP4 signature or short playback establishes complete watchability.
 
 The server validates DNS/IP addresses for every new public HTTPS connection and redirect, blocking private addresses, CGNAT/Tailscale, loopback, link-local and special transition ranges. The proxy forwards only restricted video headers, and does not forward upstream cookies, locations or provider credentials.
