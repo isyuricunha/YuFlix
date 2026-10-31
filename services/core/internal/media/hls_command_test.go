@@ -14,10 +14,10 @@ import (
 
 func testHLSSpec(root string, plan Plan) HLSSpec {
 	return HLSSpec{
-		InputPath: filepath.Join(root, "source.mkv"),
-		PlaylistPath: filepath.Join(root, "index.m3u8"),
+		InputPath:       filepath.Join(root, "source.mkv"),
+		PlaylistPath:    filepath.Join(root, "index.m3u8"),
 		SegmentTemplate: filepath.Join(root, "chunk-%05d.ts"),
-		VideoIndex: 0, AudioIndex: 2, Plan: plan,
+		VideoIndex:      0, AudioIndex: 2, Plan: plan,
 	}
 }
 
