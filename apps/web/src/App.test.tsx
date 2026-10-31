@@ -64,8 +64,12 @@ function serve(options: {
         description:'A science fiction film.'}],
     })
     if (path.includes('/catalog/sources/') && path.includes('/meta?')) return fakeResponse({
-      meta:{id:'tt0133093',type:'movie',name:'The Matrix',
-        description:'A science fiction film.',releaseInfo:'1999',genres:['Sci-Fi']},
+      meta: path.includes('type=series')
+        ? {id:'tt0903747',type:'series',name:'Breaking Bad',releaseInfo:'2008',
+          videos:[{id:'tt0903747:1:1',title:'Piloto',season:1,episode:1},
+            {id:'tt0903747:1:2',title:'Segundo episódio',season:1,episode:2}]}
+        : {id:'tt0133093',type:'movie',name:'The Matrix',
+          description:'A science fiction film.',releaseInfo:'1999',genres:['Sci-Fi']},
     })
     if (path.includes('/media/streams?') && options.providerDenied) return fakeResponse({
       streams: [],providersChecked:1,providersFailed:1,
@@ -107,7 +111,7 @@ function route(path: string) {
 }
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
-beforeEach(() => { document.title = 'YuFlix' })
+beforeEach(() => { document.title = 'YuFlix'; vi.stubGlobal('scrollTo', vi.fn()) })
 
 describe('YuFlix authentication experience', () => {
   it('shows a dedicated sign-in screen for unauthenticated visitors', async () => {
@@ -180,14 +184,27 @@ describe('YuFlix authentication experience', () => {
     expect((screen.getByRole('button', { name: 'Entrar' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('displays titles from a real catalog API response without pretending to play', async () => {
+  it('displays titles with accurate media availability messaging', async () => {
     serve({session:admin,catalog:true})
     route('/')
     expect(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})).toBeTruthy()
-    expect(screen.getByText(/reprodução ainda não está disponível/i)).toBeTruthy()
+    expect(screen.getByText(/disponibilidade de reprodução depende das fontes/i)).toBeTruthy()
   })
 
-  it('opens catalog metadata details with playback explicitly unavailable', async () => {
+  it('filters real catalog shelves without inventing series', async () => {
+    serve({session:admin,catalog:true})
+    const actor=userEvent.setup()
+    route('/')
+    await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})
+    const filter=screen.getByRole('group',{name:'Filtrar títulos'})
+    await actor.click(filter.querySelector('[aria-pressed="false"]:last-child') as HTMLButtonElement)
+    expect(screen.queryByRole('link',{name:'Ver detalhes de The Matrix'})).toBeNull()
+    expect(screen.getByText(/Nenhum título desta categoria/)).toBeTruthy()
+    await actor.click(screen.getByRole('button',{name:'Tudo'}))
+    expect(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})).toBeTruthy()
+  })
+
+  it('opens catalog metadata details without losing the global navigation', async () => {
     serve({session:admin,catalog:true})
     const actor = userEvent.setup()
     route('/')
@@ -195,6 +212,9 @@ describe('YuFlix authentication experience', () => {
     await actor.click(card)
     expect(await screen.findByRole('heading',{level:1,name:'The Matrix'})).toBeTruthy()
     expect(screen.getByRole('heading',{name:'Fontes de vídeo'})).toBeTruthy()
+    expect(screen.getByRole('navigation',{name:'Principal'})).toBeTruthy()
+    await actor.click(screen.getByRole('link',{name:'Início'}))
+    expect(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})).toBeTruthy()
   })
 
   it('discovers video candidates and uses only same-origin media session URLs', async () => {
@@ -211,6 +231,45 @@ describe('YuFlix authentication experience', () => {
     expect(sessions).toHaveLength(1)
     expect(sessions[0][1]?.credentials).toBe('same-origin')
     expect(screen.queryByText(/https:\/\/video-provider/)).toBeNull()
+  })
+
+  it('selects an episode before looking up sources and keeps the choice visible', async () => {
+    const calls = serve({session:admin})
+    const actor = userEvent.setup()
+    route('/title/123e4567-e89b-12d3-a456-426614174000/series/tt0903747')
+    await screen.findByRole('heading',{name:'Breaking Bad'})
+    expect(screen.getByRole('heading',{name:'Episódios'})).toBeTruthy()
+    expect(screen.getByText('Escolha um episódio')).toBeTruthy()
+    const episode=screen.getByRole('button',{name:/Piloto/})
+    await actor.click(episode)
+    expect(episode.getAttribute('aria-pressed')).toBe('true')
+    await screen.findByRole('heading',{name:'Fontes de vídeo'})
+    expect(calls.mock.calls.filter(call => String(call[0]).includes('/media/streams?'))).toHaveLength(0)
+    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
+    await waitFor(()=>expect(calls.mock.calls.some(call=>String(call[0]).includes('tt0903747%3A1%3A1'))).toBe(true))
+  })
+
+  it('opens the player as a focused dialog and closes it with Escape', async () => {
+    serve({session:admin,catalog:true})
+    const actor=userEvent.setup()
+    route('/')
+    await actor.click(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'}))
+    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
+    const action=await screen.findByRole('button',{name:'Testar Direct Play'})
+    await actor.click(action)
+    const dialog=await screen.findByRole('dialog',{name:/Reprodução: MP4 seguro/})
+    expect(dialog.getAttribute('aria-modal')).toBe('true')
+    expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Fechar player')
+    await actor.keyboard('{Escape}')
+    await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('button',{name:'Testar Direct Play'})).toBeTruthy()
+  })
+
+  it('deep links to a specific administration section', async () => {
+    serve({session:admin,streamSettings:true})
+    route('/admin?section=streams')
+    expect(await screen.findByRole('heading',{name:'Provedores de vídeo'})).toBeTruthy()
+    expect(screen.getByRole('button',{name:'Reprodução'}).getAttribute('aria-current')).toBe('page')
   })
 
   it('explains an upstream 403 without exposing provider URLs', async () => {
