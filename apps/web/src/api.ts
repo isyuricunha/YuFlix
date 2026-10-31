@@ -79,3 +79,13 @@ export type PlaybackSession = {
   sourceName: string
   name: string
 }
+
+export type ProviderStatus = {
+  name: string
+  state: 'ok' | 'empty' | 'unsupported' | 'error'
+  reason?: 'access_denied' | 'not_found' | 'rate_limited' | 'upstream_unavailable' | 'http_error'
+    | 'timeout' | 'unsafe_address' | 'invalid_response' | 'connection_failed'
+  httpStatus?: number
+  received: number
+  supported: number
+}

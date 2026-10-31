@@ -6,7 +6,7 @@ YuFlix has a native Stremio stream discovery interface and a deliberately narrow
 
 1. Administrators add a public stream addon under Administration > Reprodução. The entire configured HTTPS manifest URL is accepted, including URL-encoded configuration before /manifest.json.
 2. Visit a catalog title. For series, select a specific episode.
-3. Select Buscar fontes. Only public HTTPS progressive MP4 sources that do not require proxy headers are shown.
+3. Select Buscar fontes. Only public HTTPS MP4 sources and opaque extensionless HTTPS URLs that do not require proxy headers are shown. Extensionless candidates must pass a bounded MP4 signature and Range probe before a session is created.
 4. Select Testar Direct Play. The Core fetches a short bounded HTTP byte range, checks HTTP 206 and MP4 file signature, and creates a user-bound expiring session.
 5. The player accesses the Core over the existing installation origin using a temporary path and the same authenticated cookie.
 
@@ -15,7 +15,7 @@ Stream providers are shared among users; the sessions remain scoped to each user
 ## Playback and limitations
 
 This milestone supports only:
-- Public HTTPS URLs ending in .mp4 or .m4v, optionally including a signed query string.
+- Public HTTPS URLs ending in .mp4 or .m4v, or opaque extensionless HTTPS URLs when the byte-range response is verified as MP4. A signed query string is permitted; URLs are never exposed to clients.
 - Byte-range streaming with Content-Range, HTTP 206 and seek requests.
 - Go standard library streaming relay without disk buffering, FFmpeg invocation or transcode.
 - One source selected explicitly by the user; opaque candidate bindings detect provider reordering, and failure does not delete other sources.
@@ -50,3 +50,9 @@ Before considering the Media Engine production complete, run real source session
 - https://developer.mozilla.org/en-US/docs/Web/HTTP/Range_requests
 - https://developer.mozilla.org/en-US/docs/Web/Media/Guides/Formats
 - https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
+
+## Troubleshooting upstream stream discovery
+
+YuFlix distinguishes upstream HTTP denial (403), no streams returned, unsupported media formats, timeout and other network failures in the authenticated title view. Responses carry only provider display names and sanitized error codes. Manifest and signed stream URLs are never returned.
+
+An addon manifest returning 200 only means registration succeeded. HTTP 403 for /stream/... is an upstream access refusal. AIOStreams can display cached or library-backed sources; its "(Your Media)" formatter label identifies library-backed media rather than proving that a public addon is returning fresh results.

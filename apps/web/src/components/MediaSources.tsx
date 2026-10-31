@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { api, type MediaCandidate, type PlaybackSession } from '../api'
+import { api, type MediaCandidate, type PlaybackSession, type ProviderStatus } from '../api'
 
 export default function MediaSources({type,videoId,isAdmin}:{
   type:'movie'|'series';videoId:string;isAdmin:boolean
 }) {
   const [candidates,setCandidates]=useState<MediaCandidate[]>([])
   const [providers,setProviders]=useState(0)
-  const [failures,setFailures]=useState(0)
+  const [statuses,setStatuses]=useState<ProviderStatus[]>([])
   const [loading,setLoading]=useState(false)
   const [checking,setChecking]=useState<string|null>(null)
   const [session,setSession]=useState<PlaybackSession|null>(null)
@@ -15,21 +15,21 @@ export default function MediaSources({type,videoId,isAdmin}:{
   useEffect(()=>{
     setCandidates([])
     setProviders(0)
-    setFailures(0)
+    setStatuses([])
     setSession(null)
     setMessage('')
   },[type,videoId])
   async function discover(){
-    setLoading(true);setMessage('');setSession(null)
+    setLoading(true);setMessage('');setSession(null);setStatuses([]);setCandidates([])
     try{
       const params='?type='+encodeURIComponent(type)+'&id='+encodeURIComponent(videoId)
-      const data=await api<{streams:MediaCandidate[],providersChecked:number,providersFailed:number}>('/media/streams'+params)
+      const data=await api<{streams:MediaCandidate[],providersChecked:number,providersFailed:number,providerStatuses?:ProviderStatus[]}>('/media/streams'+params)
       setCandidates(data.streams)
       setProviders(data.providersChecked)
-      setFailures(data.providersFailed)
+      setStatuses(data.providerStatuses??[])
       if(!data.streams.length){
         setMessage(data.providersChecked===0 ? 'Nenhum provedor de vídeo cadastrado.' :
-          'Os provedores não retornaram fontes MP4 compatíveis para este título.')
+          'Nenhuma fonte reproduzível foi encontrada. Confira o resultado de cada provedor abaixo.')
       }
     } catch {
       setMessage('Não foi possível consultar as fontes de vídeo.')
@@ -55,11 +55,26 @@ export default function MediaSources({type,videoId,isAdmin}:{
         {loading?'Procurando...':candidates.length?'Atualizar fontes':'Buscar fontes'}
       </button>
     </div>
-    <p className="yf-playback__description">Direct Play experimental. Apenas MP4 HTTPS com Range é aceito, sem baixar o arquivo inteiro ou usar transcode.</p>
+    <p className="yf-playback__description">Direct Play experimental. MP4 HTTPS, inclusive URLs sem extensão verificadas por Range, é aceito, sem baixar o arquivo inteiro ou usar transcode.</p>
     {message && <p className="yf-playback__notice" role="status">{message}
       {providers===0&&isAdmin&&<span> <Link to="/admin">Configure um provedor em Administração → Reprodução.</Link></span>}
     </p>}
-    {!!failures && <p className="yf-playback__notice">{failures} provedor(es) não responderam.</p>}
+    {!!statuses.length && <div className="yf-playback__provider-results" aria-label="Resultado dos provedores">
+      {statuses.filter(source=>source.state!=='ok').map((source,index)=><p className="yf-playback__notice" key={source.name+index} role="status">
+        <strong>{source.name}:</strong>{' '}
+        {source.state==='empty' ? 'Nenhum vídeo retornado.' :
+          source.state==='unsupported' ? source.received+' fonte(s) retornada(s), mas nenhuma compatível com o Direct Play MP4 atual.' :
+          source.reason==='access_denied' ? 'Acesso recusado pelo provedor (HTTP '+(source.httpStatus||403)+').' :
+          source.reason==='not_found' ? 'Conteúdo não encontrado pelo addon (HTTP 404).' :
+          source.reason==='rate_limited' ? 'Provedor limitou temporariamente as consultas (HTTP 429).' :
+          source.reason==='timeout' ? 'Tempo limite da consulta atingido.' :
+          source.reason==='unsafe_address' ? 'O destino foi bloqueado pela política de segurança.' :
+          source.reason==='invalid_response' ? 'Resposta inválida ou incompatível com o protocolo Stremio.' :
+          source.reason==='upstream_unavailable' ? 'Servidor do addon indisponível (HTTP '+(source.httpStatus||500)+').' :
+          source.httpStatus ? 'Erro HTTP '+source.httpStatus+' retornado pelo addon.' :
+          'Não foi possível conectar ao addon.'}
+      </p>)}
+    </div>}
     {!!candidates.length && <div className="yf-playback__sources">
       {candidates.map(item=><div className="yf-playback__source" key={item.sourceId+':'+item.index}>
         <div><strong>{item.name}</strong><span>{item.sourceName}{item.title?' · '+item.title:''}</span></div>

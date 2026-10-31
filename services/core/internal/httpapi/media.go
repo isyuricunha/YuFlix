@@ -28,6 +28,50 @@ type videoTickets struct {
 	mu    sync.Mutex
 	items map[string]videoTicket
 }
+
+// ProviderStatus is safe to send to authenticated viewers. It never embeds
+// manifest paths, query parameters, authentication headers or stream URLs.
+type ProviderStatus struct {
+	Name       string `json:"name"`
+	State      string `json:"state"`
+	Reason     string `json:"reason,omitempty"`
+	HTTPStatus int    `json:"httpStatus,omitempty"`
+	Received   int    `json:"received"`
+	Supported  int    `json:"supported"`
+}
+
+func safeProviderReason(err error) string {
+	if err == nil {
+		return ""
+	}
+	var status *catalog.UpstreamHTTPError
+	if errors.As(err, &status) {
+		switch status.StatusCode {
+		case 401, 403:
+			return "access_denied"
+		case 404:
+			return "not_found"
+		case 429:
+			return "rate_limited"
+		default:
+			if status.StatusCode >= 500 {
+				return "upstream_unavailable"
+			}
+			return "http_error"
+		}
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	if errors.Is(err, catalog.ErrUnsafeURL) {
+		return "unsafe_address"
+	}
+	if errors.Is(err, catalog.ErrInvalid) {
+		return "invalid_response"
+	}
+	return "connection_failed"
+}
+
 type displayStream struct {
 	SourceID   string `json:"sourceId"`
 	SourceName string `json:"sourceName"`
@@ -136,22 +180,42 @@ func (a *api) listMediaStreams(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out := make([]displayStream, 0)
+	statuses := make([]ProviderStatus, 0, len(addons))
 	errorsCount := 0
+	checked := 0
 	for _, addon := range addons {
 		if !addon.Enabled {
 			continue
 		}
-		streams, err := a.catalogClient.Streams(ctx, addon.ManifestURL, typ, id)
+		checked++
+		report, err := a.catalogClient.StreamsDetailed(ctx, addon.ManifestURL, typ, id)
 		if err != nil {
 			errorsCount++
+			status := ProviderStatus{Name: addon.Name, State: "error", Reason: safeProviderReason(err)}
+			var upstream *catalog.UpstreamHTTPError
+			if errors.As(err, &upstream) {
+				status.HTTPStatus = upstream.StatusCode
+			}
+			statuses = append(statuses, status)
 			continue
 		}
-		for index, s := range streams {
+		state := "ok"
+		if len(report.Streams) == 0 {
+			if report.Received > 0 {
+				state = "unsupported"
+			} else {
+				state = "empty"
+			}
+		}
+		statuses = append(statuses, ProviderStatus{
+			Name: addon.Name, State: state, Received: report.Received, Supported: len(report.Streams)})
+		for index, stream := range report.Streams {
 			out = append(out, displayStream{SourceID: addon.ID, SourceName: addon.Name,
-				Index: index, Name: s.Name, Title: s.Title, Mode: "direct_play_candidate", Key: a.candidateKey(addon.ID, id, s.URL)})
+				Index: index, Name: stream.Name, Title: stream.Title, Mode: "direct_play_candidate", Key: a.candidateKey(addon.ID, id, stream.URL)})
 		}
 	}
-	writeJSON(w, 200, map[string]any{"streams": out, "providersChecked": len(addons), "providersFailed": errorsCount})
+	writeJSON(w, 200, map[string]any{"streams": out, "providersChecked": checked,
+		"providersFailed": errorsCount, "providerStatuses": statuses})
 }
 func (a *api) startMediaSession(w http.ResponseWriter, r *http.Request) {
 	var input struct {

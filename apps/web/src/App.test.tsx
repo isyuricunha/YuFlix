@@ -35,6 +35,7 @@ function serve(options: {
   success?: boolean
   authenticationReady?: boolean
   catalog?: boolean
+  providerDenied?: boolean
 } = {}) {
   const fakeFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = input.toString()
@@ -63,6 +64,10 @@ function serve(options: {
     if (path.includes('/catalog/sources/') && path.includes('/meta?')) return fakeResponse({
       meta:{id:'tt0133093',type:'movie',name:'The Matrix',
         description:'A science fiction film.',releaseInfo:'1999',genres:['Sci-Fi']},
+    })
+    if (path.includes('/media/streams?') && options.providerDenied) return fakeResponse({
+      streams: [],providersChecked:1,providersFailed:1,
+      providerStatuses:[{name:'BestCine',state:'error',reason:'access_denied',httpStatus:403,received:0,supported:0}],
     })
     if (path.includes('/media/streams?')) return fakeResponse({
       streams:[{sourceId:'123e4567-e89b-12d3-a456-426614174000',
@@ -192,6 +197,18 @@ describe('YuFlix authentication experience', () => {
     expect(sessions).toHaveLength(1)
     expect(sessions[0][1]?.credentials).toBe('same-origin')
     expect(screen.queryByText(/https:\/\/video-provider/)).toBeNull()
+  })
+
+  it('explains an upstream 403 without exposing provider URLs', async () => {
+    serve({session:admin,catalog:true,providerDenied:true})
+    const actor=userEvent.setup()
+    route('/')
+    await actor.click(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'}))
+    await screen.findByRole('heading',{name:'The Matrix',level:1})
+    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
+    expect(await screen.findByText(/Acesso recusado pelo provedor \(HTTP 403\)/)).toBeTruthy()
+    expect(screen.queryByText('1 provedor(es) não responderam.')).toBeNull()
+    expect(screen.queryByText(/manifest\.json/)).toBeNull()
   })
 
 })

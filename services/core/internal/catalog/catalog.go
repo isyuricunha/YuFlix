@@ -22,6 +22,14 @@ var (
 	ErrUpstream  = errors.New("catalog provider unavailable")
 	ErrInvalid   = errors.New("invalid catalog metadata")
 )
+
+// UpstreamHTTPError deliberately contains no URL, response body or headers:
+// configured manifest paths and stream locations may embed credentials.
+type UpstreamHTTPError struct{ StatusCode int }
+
+func (e *UpstreamHTTPError) Error() string        { return fmt.Sprintf("upstream HTTP %d", e.StatusCode) }
+func (e *UpstreamHTTPError) Is(target error) bool { return target == ErrUpstream }
+
 var identifier = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,99}$`)
 var cgnat = netip.PrefixFrom(netip.AddrFrom4([4]byte{100, 64, 0, 0}), 10)
 var benchmark = netip.MustParsePrefix("198.18.0.0/15")
@@ -247,11 +255,20 @@ func (c *Client) fetch(ctx context.Context, target string, max int64, dst any) e
 	req.Header.Set("User-Agent", "YuFlix/1.0 (Stremio catalog client)")
 	res, err := c.client.Do(req)
 	if err != nil {
+		// Keep the error category while never returning the URL or any
+		// signed provider response details to API clients or logs.
+		if errors.Is(err, context.DeadlineExceeded) {
+			return context.DeadlineExceeded
+		}
+		var nerr net.Error
+		if errors.As(err, &nerr) && nerr.Timeout() {
+			return context.DeadlineExceeded
+		}
 		return ErrUpstream
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return ErrUpstream
+		return &UpstreamHTTPError{StatusCode: res.StatusCode}
 	}
 	if !strings.Contains(strings.ToLower(res.Header.Get("Content-Type")), "json") {
 		return ErrInvalid

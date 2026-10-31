@@ -56,9 +56,16 @@ func validateMediaURL(input string) bool {
 			}
 		}
 	}
-	// Deliberately limit the first playback transport to progressive MP4 files.
+	// Explicitly recognized MP4 paths are candidates; opaque public HTTPS
+	// paths also qualify for a *probe*, not for guaranteed playback. Many
+	// Stremio addons use signed opaque stream identifiers without extensions.
+	// HLS, MKV and other named formats remain excluded until supported.
 	path := strings.ToLower(u.Path)
-	return strings.HasSuffix(path, ".mp4") || strings.HasSuffix(path, ".m4v")
+	if strings.HasSuffix(path, ".mp4") || strings.HasSuffix(path, ".m4v") {
+		return true
+	}
+	leaf := path[strings.LastIndex(path, "/")+1:]
+	return leaf != "" && len(leaf) <= 600 && !strings.Contains(leaf, ".")
 }
 func ValidateMediaURL(input string) bool { return validateMediaURL(input) }
 func (c *Client) StreamManifest(ctx context.Context, manifestURL string) (StreamSource, error) {
@@ -105,17 +112,30 @@ func (c *Client) StreamManifest(ctx context.Context, manifestURL string) (Stream
 	}
 	return StreamSource{Name: manifest.Name, ID: manifest.ID}, nil
 }
+
+// StreamReport distinguishes a reachable provider with unsupported streams
+// from a provider whose HTTP request actually failed.
+type StreamReport struct {
+	Streams     []Candidate
+	Received    int
+	Unsupported int
+}
+
 func (c *Client) Streams(ctx context.Context, manifestURL, typ, videoID string) ([]Candidate, error) {
+	report, err := c.StreamsDetailed(ctx, manifestURL, typ, videoID)
+	return report.Streams, err
+}
+func (c *Client) StreamsDetailed(ctx context.Context, manifestURL, typ, videoID string) (StreamReport, error) {
 	url, err := ValidateManifestURL(manifestURL)
 	if err != nil || (typ != "movie" && typ != "series") || !ValidMediaID(videoID) {
-		return nil, ErrUnsafeURL
+		return StreamReport{}, ErrUnsafeURL
 	}
 	base := strings.TrimSuffix(url, "/manifest.json")
 	var payload struct {
 		Streams []streamEntry `json:"streams"`
 	}
 	if err := c.fetch(ctx, base+"/stream/"+typ+"/"+videoID+".json", 512<<10, &payload); err != nil {
-		return nil, err
+		return StreamReport{}, err
 	}
 	result := make([]Candidate, 0, 12)
 	for _, st := range payload.Streams {
@@ -142,5 +162,5 @@ func (c *Client) Streams(ctx context.Context, manifestURL, typ, videoID string) 
 			break
 		}
 	}
-	return result, nil
+	return StreamReport{Streams: result, Received: len(payload.Streams), Unsupported: len(payload.Streams) - len(result)}, nil
 }
