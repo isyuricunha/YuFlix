@@ -64,7 +64,7 @@ export default function CatalogSources() {
           placeholder="https://v3-cinemeta.strem.io/manifest.json" onChange={e=>setURL(e.target.value)} />
         <button type="submit" className="yf-admin__primary" disabled={busy}>{busy?'Validando manifesto...':'Adicionar fonte'}</button>
       </form>
-      <p className="yf-admin__muted">Por segurança, esta etapa aceita apenas URLs públicas HTTPS sem tokens. Addons privados e IPTV serão tratados em uma integração separada.</p>
+      <p className="yf-admin__muted">Por segurança, esta etapa aceita apenas URLs públicas HTTPS com configurações no caminho, sem query string. Addons privados e IPTV serão tratados em uma integração separada.</p>
     </div>
     {notice && <p role="status" className="yf-admin__notice">{notice}</p>}
     {error && <p role="alert" className="yf-alert">{error}</p>}

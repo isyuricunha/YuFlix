@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { api, type StreamAddon } from '../api'
+import { APIError, api, type StreamAddon } from '../api'
 
 export default function StreamSources() {
   const [sources, setSources] = useState<StreamAddon[]>([])
@@ -27,8 +27,15 @@ export default function StreamSources() {
       setSources(prev=>[...prev,response.source])
       setManifestURL('')
       setNotice('Provedor cadastrado. A descoberta de fontes estará disponível nos títulos.')
-    } catch {
-      setError('Não foi possível cadastrar. Use um manifesto Stremio público HTTPS com recurso de stream.')
+    } catch (cause) {
+      if (cause instanceof APIError) {
+        setError(cause.status===422 ? 'O endereço foi aceito, mas o manifesto não respondeu ou não oferece streams compatíveis.' :
+          cause.status===400 ? 'Endereço inválido. Cole a URL HTTPS completa do manifesto configurado.' :
+          cause.status===409 ? 'Esse provedor já foi cadastrado ou o limite foi atingido.' :
+          cause.message)
+      } else {
+        setError('Não foi possível contatar o YuFlix. Verifique a conexão com o servidor.')
+      }
     } finally {setPending(false)}
   }
   async function remove(source: StreamAddon) {
@@ -61,7 +68,7 @@ export default function StreamSources() {
           onChange={event=>setManifestURL(event.target.value)}/>
         <button className="yf-admin__primary" type="submit" disabled={pending}>{pending?'Validando...':'Adicionar provedor'}</button>
       </form>
-      <p className="yf-admin__muted">Não cole tokens ou URLs privadas. Addons autenticados, HLS, MKV e proxies com headers especiais ainda não são suportados.</p>
+      <p className="yf-admin__muted">Use o link completo do addon, inclusive o caminho de configurações antes de /manifest.json. Não exponha esse link a outros usuários. A reprodução permanece limitada a MP4 HTTPS com Range; HLS, MKV e addons que exigem headers especiais ainda não são suportados.</p>
     </div>
     {error && <p role="alert" className="yf-alert">{error}</p>}
     {notice && <p role="status" className="yf-admin__notice">{notice}</p>}

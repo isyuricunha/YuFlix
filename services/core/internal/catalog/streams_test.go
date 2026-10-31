@@ -80,3 +80,28 @@ func TestStreamManifestMissingStreamResource(t *testing.T) {
 		t.Fatal("catalog-only addon accepted as stream provider")
 	}
 }
+
+func TestConfiguredAddonResourcePath(t *testing.T) {
+	manifestURL := "https://addon.example.com/qualities%3D1080p%2C720p%7Ca%3Ddub%2Cleg/manifest.json"
+	var seen []string
+	client := &Client{client: &http.Client{Transport: fakeRoundTrip(func(req *http.Request) (*http.Response, error) {
+		seen = append(seen, req.URL.EscapedPath())
+		if strings.HasSuffix(req.URL.Path, "/manifest.json") {
+			return fakeJSON(`{"name":"Configured Source","id":"org.example.streams","resources":["stream"]}`), nil
+		}
+		return fakeJSON(`{"streams":[{"name":"Playable Sample","url":"https://media.example.com/original.mp4"}]}`), nil
+	})}}
+	source, err := client.StreamManifest(context.Background(), manifestURL)
+	if err != nil || source.Name != "Configured Source" {
+		t.Fatalf("manifest fetch failed: %v", err)
+	}
+	streams, err := client.Streams(context.Background(), manifestURL, "movie", "tt123")
+	if err != nil || len(streams) != 1 {
+		t.Fatalf("stream discovery failed: %v", err)
+	}
+	if len(seen) != 2 ||
+		seen[0] != "/qualities%3D1080p%2C720p%7Ca%3Ddub%2Cleg/manifest.json" ||
+		seen[1] != "/qualities%3D1080p%2C720p%7Ca%3Ddub%2Cleg/stream/movie/tt123.json" {
+		t.Fatal("addon configuration was lost when forming Stremio resource path")
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/netip"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -28,6 +29,40 @@ func TestPublicAddressValidation(t *testing.T) {
 		}
 	}
 }
+func TestConfiguredStremioManifestURL(t *testing.T) {
+	valid := []string{
+		"https://addon.example.com/eyJhdWRpbyI6InB0LUJSIn0/manifest.json",
+		"https://addon.example.com/qualities%3D1080p%2C720p%7Ca%3Ddub%2Cleg/manifest.json",
+		"https://addon.example.com/qualities%3D1080p%7Ctv%3DCom%C3%A9dia%2CNatureza/manifest.json",
+		"https://addon.example.com/manifest.json",
+	}
+	for _, target := range valid {
+		got, err := ValidateManifestURL(target)
+		if err != nil || got != target {
+			t.Errorf("configured manifest rejected: %v", err)
+		}
+	}
+	longPath := "https://addon.example.com/" + strings.Repeat("quality%3D1080p%7C", 26) + "a%3Ddub/manifest.json"
+	if len(longPath) <= 300 {
+		t.Fatal("test URL must exceed old limit")
+	}
+	if _, err := ValidateManifestURL(longPath); err != nil {
+		t.Fatal(err)
+	}
+	for _, target := range []string{
+		"https://addon.example.com/%2Fadmin/manifest.json",
+		"https://addon.example.com/%5Csecrets/manifest.json",
+		"https://addon.example.com/../manifest.json",
+		"https://addon.example.com/%2E%2E/manifest.json",
+		"https://addon.example.com//manifest.json",
+		"https://addon.example.com/something/not-manifest.json",
+		"https://addon.example.com/config/manifest.json?access_token=example",
+	} {
+		if _, err := ValidateManifestURL(target); err == nil {
+			t.Errorf("invalid path accepted")
+		}
+	}
+}
 func TestManifestURLSafety(t *testing.T) {
 	good := "https://v3-cinemeta.strem.io/manifest.json"
 	if got, err := ValidateManifestURL(good); err != nil || got != good {
@@ -38,7 +73,7 @@ func TestManifestURLSafety(t *testing.T) {
 		"https://example.com:443/manifest.json", "https://user:secret@example.com/manifest.json",
 		"https://example.com/manifest.json?token=abc",
 		"https://example.com/manifest.json#fragment",
-		"https://example.com/key/manifest.json", "https://example.com/%6danifest.json",
+		"https://example.com/key/not-manifest.json", "https://example.com/%6danifest.json",
 		"https://example.com/manifest.json\nX: 1",
 		"https://example.com\\@127.0.0.1/manifest.json",
 		"https://localhost/manifest.json",

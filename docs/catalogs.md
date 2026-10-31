@@ -12,13 +12,13 @@ Operators can use the idempotent bootstrap command:
 
     docker compose run --rm --no-deps core add-public-catalog https://v3-cinemeta.strem.io/manifest.json
 
-The app accepts public HTTPS manifests at /manifest.json with movie/series catalog feeds that do not require extra arguments. Catalogs show up to 25 items per shelf. Title details use the /meta resource. Catalog requests use a bounded 90-second in-memory cache and do not perform broad scans.
+The app accepts public HTTPS manifests ending in /manifest.json, including percent-encoded configuration path segments with movie/series catalog feeds that do not require extra arguments. Catalogs show up to 25 items per shelf. Title details use the /meta resource. Catalog requests use a bounded 90-second in-memory cache and do not perform broad scans.
 
 **No media playback is implemented.** Catalog metadata does not establish the existence or validity of playable video sources.
 
 ## Security and privacy
 
-The backend validates each public HTTPS destination and pins the connection to validated public DNS addresses, rejecting private and Tailscale ranges, redirects to local networks, URL credentials and tokenized manifest paths. The frontend does not receive the stored manifest URL.
+The backend validates each public HTTPS destination and pins the connection to validated public DNS addresses, rejecting private and Tailscale ranges, redirects to local networks, URL credentials, URL query parameters and ambiguous paths. Configuration embedded in the URL path is accepted but stored privately in the database and never exposed through the frontend API. The frontend does not receive the stored manifest URL.
 
 Private Stremio addons, HTTP addons, IPTV, credential-bearing URLs, subtitles and media streams are deliberately outside this milestone. They need separate scoped secrets, network allowlists and actual playback verification.
 

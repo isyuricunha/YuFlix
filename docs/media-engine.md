@@ -4,13 +4,13 @@ YuFlix has a native Stremio stream discovery interface and a deliberately narrow
 
 ## User workflow
 
-1. Administrators add a public stream addon under Administration > Reprodução.
+1. Administrators add a public stream addon under Administration > Reprodução. The entire configured HTTPS manifest URL is accepted, including URL-encoded configuration before /manifest.json.
 2. Visit a catalog title. For series, select a specific episode.
 3. Select Buscar fontes. Only public HTTPS progressive MP4 sources that do not require proxy headers are shown.
 4. Select Testar Direct Play. The Core fetches a short bounded HTTP byte range, checks HTTP 206 and MP4 file signature, and creates a user-bound expiring session.
 5. The player accesses the Core over the existing installation origin using a temporary path and the same authenticated cookie.
 
-Stream providers are shared among users; the sessions remain scoped to each user. The original stream address, including any query-string signature, is never returned to the browser or written in normal logs.
+Stream providers are shared among users; the sessions remain scoped to each user. The manifest URL (which can contain user-specific configuration) and the original stream address, including any query-string signature, is never returned to the browser or written in normal logs.
 
 ## Playback and limitations
 

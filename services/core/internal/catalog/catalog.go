@@ -99,13 +99,42 @@ func AllowedIP(ip netip.Addr) bool {
 	}
 	return true
 }
+
+// A Stremio installation URL can include encoded addon configuration segments
+// ahead of /manifest.json. Preserve escaped bytes exactly when forming resource
+// URLs while refusing ambiguous separators, traversal and control characters.
+func validManifestPath(escaped string) bool {
+	if len(escaped) > 3800 || !strings.HasPrefix(escaped, "/") {
+		return false
+	}
+	parts := strings.Split(strings.TrimPrefix(escaped, "/"), "/")
+	if len(parts) < 1 || len(parts) > 12 || parts[len(parts)-1] != "manifest.json" {
+		return false
+	}
+	for _, raw := range parts[:len(parts)-1] {
+		if raw == "" || len(raw) > 2500 {
+			return false
+		}
+		value, err := url.PathUnescape(raw)
+		if err != nil || value == "" || value == "." || value == ".." ||
+			strings.ContainsAny(value, "/\\") {
+			return false
+		}
+		for _, r := range value {
+			if r < 0x20 || r == 0x7f {
+				return false
+			}
+		}
+	}
+	return true
+}
 func ValidateManifestURL(input string) (string, error) {
-	if input == "" || len(input) > 300 || strings.TrimSpace(input) != input || strings.ContainsAny(input, "\r\n\t\\") {
+	if input == "" || len(input) > 4096 || strings.TrimSpace(input) != input || strings.ContainsAny(input, "\r\n\t\\") {
 		return "", ErrUnsafeURL
 	}
 	u, err := url.Parse(input)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" || u.ForceQuery ||
-		u.Path != "/manifest.json" || u.RawPath != "" || u.Opaque != "" || u.Port() != "" {
+		!validManifestPath(u.EscapedPath()) || u.Opaque != "" || u.Port() != "" {
 		return "", ErrUnsafeURL
 	}
 	host := u.Hostname()
