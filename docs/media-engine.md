@@ -76,10 +76,14 @@ AIOStreams dependency or a generic proxy.
 
 Only public HTTPS addon stream discovery requests for allowlisted hostnames are
 accepted. Each URL goes through YuFlix's ordinary SSRF, DNS pinning, and
-response-size validation. HTTPS media streams continue to be relayed directly
-by Core; the egress role does **not** carry video bytes. If a video's CDN is
-not reachable from Core, playback remains unsupported until a separately
-designed, tested media transport is available.
+response-size validation. If public MP4 media URLs are also blocked from Core, the optional egress
+role can validate and relay the exact previously discovered stream. Media
+sessions are bound to the authenticated YuFlix account, with a bounded,
+read-only streaming relay over Tailscale and no disk/full-file buffering.
+Only URLs returned by an allowlisted addon and verified with HTTP Range/MP4
+signature are eligible; the egress service cannot be used as an open proxy.
+Concurrent media transfers are limited to six, and authorizations expire
+after six hours.
 
 The egress role has a small in-memory TTL cache, three concurrent requests,
 restricted CPU/RAM, no persistent state, and returns only candidates to the

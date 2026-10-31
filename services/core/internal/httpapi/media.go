@@ -21,6 +21,7 @@ type videoTicket struct {
 	sourceID  string
 	userID    string
 	transport string
+	remote    bool
 	url       string
 	expires   time.Time
 }
@@ -261,7 +262,14 @@ func (a *api) startMediaSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.direct.Probe(ctx, candidate.URL); err != nil {
+	remote := a.catalogClient.UsesEgress(addon.ManifestURL)
+	var probeErr error
+	if remote {
+		probeErr = a.catalogClient.ProbeViaEgress(ctx, addon.ManifestURL, input.Type, input.ID, candidate.URL)
+	} else {
+		probeErr = a.direct.Probe(ctx, candidate.URL)
+	}
+	if probeErr != nil {
 		failure(w, 422, "a fonte não passou na verificação de MP4 com Range")
 		return
 	}
@@ -285,7 +293,7 @@ func (a *api) startMediaSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.video.items[ticket] = videoTicket{sourceID: input.SourceID, userID: user.ID, transport: transportFromContext(r),
-		url: candidate.URL, expires: now.Add(6 * time.Hour)}
+		url: candidate.URL, remote: remote, expires: now.Add(6 * time.Hour)}
 	a.video.mu.Unlock()
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 201, map[string]any{
@@ -320,6 +328,10 @@ func (a *api) relayMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Never return or log upstream source URLs or request headers.
+	if ticket.remote {
+		a.catalogClient.RelayViaEgress(w, r, ticket.url)
+		return
+	}
 	a.direct.Relay(w, r, ticket.url)
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/isyuricunha/YuFlix/services/core/internal/catalog"
+	"github.com/isyuricunha/YuFlix/services/core/internal/media"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -22,12 +23,15 @@ type cacheEntry struct {
 	expires time.Time
 }
 type relay struct {
-	token  string
-	hosts  map[string]bool
-	client *catalog.Client
-	slots  chan struct{}
-	mu     sync.Mutex
-	cache  map[string]cacheEntry
+	token      string
+	hosts      map[string]bool
+	client     *catalog.Client
+	slots      chan struct{}
+	mu         sync.Mutex
+	cache      map[string]cacheEntry
+	allowed    map[string]time.Time
+	videoSlots chan struct{}
+	direct     *media.Direct
 }
 
 func (h *relay) serve(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +41,7 @@ func (h *relay) serve(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 		return
 	}
-	if r.URL.Path != "/v1/streams" {
+	if r.URL.Path != "/v1/streams" && r.URL.Path != "/v1/probe" && r.URL.Path != "/v1/media" {
 		http.Error(w, "not found", 404)
 		return
 	}
@@ -53,6 +57,14 @@ func (h *relay) serve(w http.ResponseWriter, r *http.Request) {
 	}
 	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 		http.Error(w, "wrong content type", 415)
+		return
+	}
+	if r.URL.Path == "/v1/probe" {
+		h.probeMedia(w, r)
+		return
+	}
+	if r.URL.Path == "/v1/media" {
+		h.streamMedia(w, r)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 6500)
@@ -139,8 +151,9 @@ func main() {
 	if len(hosts) == 0 || len(hosts) > 12 {
 		panic("invalid egress hosts")
 	}
-	h := &relay{token: token, hosts: hosts, client: catalog.NewClient(), slots: make(chan struct{}, 3), cache: map[string]cacheEntry{}}
-	server := &http.Server{Addr: addr, Handler: http.HandlerFunc(h.serve), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 18 * time.Second, WriteTimeout: 18 * time.Second, IdleTimeout: 20 * time.Second, MaxHeaderBytes: 8192}
+	h := &relay{token: token, hosts: hosts, client: catalog.NewClient(), slots: make(chan struct{}, 3), cache: map[string]cacheEntry{}, allowed: map[string]time.Time{},
+		videoSlots: make(chan struct{}, 6), direct: media.NewDirect()}
+	server := &http.Server{Addr: addr, Handler: http.HandlerFunc(h.serve), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 18 * time.Second, WriteTimeout: 0, IdleTimeout: 20 * time.Second, MaxHeaderBytes: 8192}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 	slog.Info("YuFlix egress starting")
