@@ -13,6 +13,8 @@ type StreamAddon struct {
 	Enabled      bool   `json:"enabled"`
 	ManifestURL  string `json:"-"`
 	NetworkRoute string `json:"networkRoute"`
+	Priority     int    `json:"priority"`
+	TimeoutMs    int    `json:"timeoutMs"`
 }
 
 func readStreamAddon(row pgx.Row) (StreamAddon, error) {
@@ -25,16 +27,20 @@ func readStreamAddon(row pgx.Row) (StreamAddon, error) {
 	var config struct {
 		ManifestURL  string `json:"manifestUrl"`
 		NetworkRoute string `json:"networkRoute"`
+		Priority     int    `json:"priority"`
+		TimeoutMs    int    `json:"timeoutMs"`
 	}
 	if err = json.Unmarshal(value, &config); err != nil || config.ManifestURL == "" {
 		return s, errors.New("invalid stream addon configuration")
 	}
 	s.ManifestURL = config.ManifestURL
 	s.NetworkRoute = normalizedStreamRoute(config.NetworkRoute)
+	s.Priority = normalizedPriority(config.Priority)
+	s.TimeoutMs = normalizedTimeout(config.TimeoutMs)
 	return s, nil
 }
 func (d *DB) AddStreamAddon(ctx context.Context, name, manifestURL string) (StreamAddon, error) {
-	raw, err := json.Marshal(map[string]string{"manifestUrl": manifestURL, "networkRoute": "direct"})
+	raw, err := json.Marshal(map[string]any{"manifestUrl": manifestURL, "networkRoute": "direct", "priority": 500, "timeoutMs": 5000})
 	if err != nil {
 		return StreamAddon{}, err
 	}
@@ -60,12 +66,16 @@ func (d *DB) ListStreamAddons(ctx context.Context) ([]StreamAddon, error) {
 		var v struct {
 			ManifestURL  string `json:"manifestUrl"`
 			NetworkRoute string `json:"networkRoute"`
+			Priority     int    `json:"priority"`
+			TimeoutMs    int    `json:"timeoutMs"`
 		}
 		if err = json.Unmarshal(data, &v); err != nil || v.ManifestURL == "" {
 			return nil, errors.New("invalid stream addon config")
 		}
 		s.ManifestURL = v.ManifestURL
 		s.NetworkRoute = normalizedStreamRoute(v.NetworkRoute)
+		s.Priority = normalizedPriority(v.Priority)
+		s.TimeoutMs = normalizedTimeout(v.TimeoutMs)
 		out = append(out, s)
 	}
 	return out, rows.Err()
@@ -99,4 +109,31 @@ func (d *DB) UpdateStreamAddonRoute(ctx context.Context, id, route string) (Stre
 		`UPDATE source_configs SET config=jsonb_set(config,'{networkRoute}',to_jsonb($2::text),true)
    WHERE type='stremio_stream' AND id=$1::uuid
    RETURNING id::text,name,enabled,config`, id, route))
+}
+
+// Older sources without a policy receive safe defaults without migrations.
+func normalizedPriority(value int) int {
+	if value < 1 || value > 1000 {
+		return 500
+	}
+	return value
+}
+func normalizedTimeout(value int) int {
+	if value < 1000 || value > 10000 {
+		return 5000
+	}
+	return value
+}
+
+// Policies live in existing JSONB config and never expose source credentials.
+func (d *DB) UpdateStreamAddonPolicy(ctx context.Context, id string, priority, timeoutMs int) (StreamAddon, error) {
+	if priority < 1 || priority > 1000 || timeoutMs < 1000 || timeoutMs > 10000 {
+		return StreamAddon{}, errors.New("invalid source policy")
+	}
+	return readStreamAddon(d.pool.QueryRow(ctx,
+		"UPDATE source_configs SET config=jsonb_set("+
+			"jsonb_set(config,'{priority}',to_jsonb($2::integer),true),"+
+			"'{timeoutMs}',to_jsonb($3::integer),true) "+
+			"WHERE type='stremio_stream' AND id=$1::uuid "+
+			"RETURNING id::text,name,enabled,config", id, priority, timeoutMs))
 }

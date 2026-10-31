@@ -4,7 +4,7 @@
 
 YuFlix is an independent, self-hosted streaming platform for movies, series, anime, and IPTV. Built for shared sources with independent accounts, Portuguese (Brazil) first, and a media engine that prefers Direct Play over unnecessary transcoding.
 
-> **Early preview, not a Jellyfin replacement.** YuFlix now offers authenticated Stremio catalog discovery and experimental progressive MP4 Direct Play via authorized, expiring sessions with HTTP Range relay. HLS, remux and transcoding are not implemented. Validated MP4 Range responses do not establish reliable end-to-end playback on every device.
+> **Early preview, not a Jellyfin replacement.** YuFlix now offers authenticated Stremio catalog discovery and automatic, priority-driven experimental progressive MP4 Direct Play via authorized, expiring sessions with HTTP Range relay. HLS, remux and transcoding are not implemented. Validated MP4 Range responses do not establish reliable end-to-end playback on every device.
 
 ## Technology
 
@@ -67,6 +67,7 @@ Check:
 - [OpenAPI v1 contract](api/openapi.yaml)
 - [PostgreSQL and HTTP/HTTPS activation](docs/database.md)
 - [Web UX and login flow](docs/web-ui.md)
+- [Automatic playback and persistent catalog cache](docs/automatic-playback.md)
 
 This repository intentionally contains no infrastructure-specific hostnames, IPs, credentials, or environment dumps.
 

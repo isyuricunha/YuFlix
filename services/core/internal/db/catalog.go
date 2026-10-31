@@ -15,6 +15,7 @@ type StoredCatalog struct {
 type SourceConfig struct {
 	ManifestURL string          `json:"manifestUrl"`
 	Catalogs    []StoredCatalog `json:"catalogs"`
+	CacheMode   string          `json:"cacheMode,omitempty"`
 }
 type CatalogSource struct {
 	ID          string          `json:"id"`
@@ -22,11 +23,12 @@ type CatalogSource struct {
 	Enabled     bool            `json:"enabled"`
 	Catalogs    []StoredCatalog `json:"catalogs"`
 	ManifestURL string          `json:"-"`
+	CacheMode   string          `json:"cacheMode"`
 }
 
 func (d *DB) AddCatalogSource(ctx context.Context, name, url string, catalogs []StoredCatalog) (CatalogSource, error) {
 	var src CatalogSource
-	cfg, err := json.Marshal(SourceConfig{ManifestURL: url, Catalogs: catalogs})
+	cfg, err := json.Marshal(SourceConfig{ManifestURL: url, Catalogs: catalogs, CacheMode: "on-demand"})
 	if err != nil {
 		return src, err
 	}
@@ -39,6 +41,7 @@ func (d *DB) AddCatalogSource(ctx context.Context, name, url string, catalogs []
 	}
 	src.Catalogs = catalogs
 	src.ManifestURL = url
+	src.CacheMode = "on-demand"
 	return src, nil
 }
 func scanCatalogSource(row pgx.Row) (CatalogSource, error) {
@@ -54,6 +57,7 @@ func scanCatalogSource(row pgx.Row) (CatalogSource, error) {
 	}
 	s.Catalogs = cfg.Catalogs
 	s.ManifestURL = cfg.ManifestURL
+	s.CacheMode = normalizeCacheMode(cfg.CacheMode)
 	return s, nil
 }
 func (d *DB) GetCatalogSource(ctx context.Context, id string) (CatalogSource, error) {
@@ -78,6 +82,7 @@ func (d *DB) ListCatalogSources(ctx context.Context) ([]CatalogSource, error) {
 		}
 		s.Catalogs = v.Catalogs
 		s.ManifestURL = v.ManifestURL
+		s.CacheMode = normalizeCacheMode(v.CacheMode)
 		out = append(out, s)
 	}
 	return out, rows.Err()

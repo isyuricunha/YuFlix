@@ -37,3 +37,7 @@ Run go test -race ./... within services/core, pnpm test and pnpm build at reposi
 For an opt-in live upstream check, set YUFLIX_TEST_PUBLIC_ADDON=true and run go test -run TestPublicCinemetaIntegration -v ./internal/catalog.
 
 Use a disposable PostgreSQL database for the SQL integration test, never production.
+
+## Persistent metadata snapshots
+
+Catalog pages are cached per source in PostgreSQL 17 using migration 0003. The admin can select Off, On demand or Limited precache globally or per source. Fresh snapshots live for six hours; snapshots up to 48 hours old are served while bounded background refresh runs. Playback URLs are never persisted. The first two eligible catalog categories may be warmed on selecting precache, without scanning the entire upstream catalog. See [automatic playback](automatic-playback.md).

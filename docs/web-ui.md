@@ -48,3 +48,5 @@ Automated headless Chromium checks covered 390px mobile, 820px tablet, 1440px de
 On 2026-10-31, an isolated, ephemeral Playwright Chromium headless shell on LAB verified navigation, category filter, title detail, source dialog, administration and horizontal overflow at 390px, 820px, 1440px and 1920px, with mocked safe media API responses. No console/runtime errors remained other than a deliberately mocked 404 media response. This does not prove real provider playback or physical device compatibility. The temporary Vite server was stopped after the checks.
 
 Series episode selection precedes source discovery and uses a bounded, scrollable episode grid to avoid forcing a long scroll past every episode.
+
+The viewer now sees a single Watch now action. Source priority, timeout and troubleshooting remain in Administration. The player can request a fallback source after a media error and attempts the next actual episode when one exists in metadata. Subtitles, audio tracks, HLS and transcoding are not represented as available until implemented and tested.

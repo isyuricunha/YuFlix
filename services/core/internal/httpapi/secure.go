@@ -117,7 +117,7 @@ func (l *loginLimiter) allow(key string) bool {
 func (l *loginLimiter) reset(key string) { l.mu.Lock(); defer l.mu.Unlock(); delete(l.items, key) }
 func newAPI(o Options) *api {
 	a := &api{db: o.Database, origins: map[string]struct{}{}, trustProxy: o.TrustProxy,
-		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2), catalogClient: catalog.NewClient(), cache: &catalogCache{data: map[string]catalogCacheEntry{}}, direct: media.NewDirect(), video: &videoTickets{items: map[string]videoTicket{}}, mediaSlots: make(chan struct{}, 4), relaySlots: make(chan struct{}, 8)}
+		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2), catalogClient: catalog.NewClient(), cache: &catalogCache{data: map[string]catalogCacheEntry{}, refreshing: map[string]bool{}, refreshSlots: make(chan struct{}, 2)}, direct: media.NewDirect(), video: &videoTickets{items: map[string]videoTicket{}}, mediaSlots: make(chan struct{}, 4), relaySlots: make(chan struct{}, 8)}
 	if _, err := rand.Read(a.streamKey[:]); err != nil {
 		panic("secure media selection unavailable")
 	}

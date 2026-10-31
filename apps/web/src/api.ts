@@ -47,7 +47,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 
 export type CatalogDefinition = { type: string; id: string; name: string }
-export type CatalogSource = { id: string; name: string; enabled: boolean; catalogs: CatalogDefinition[] }
+export type CatalogSource = { id: string; name: string; enabled: boolean; catalogs: CatalogDefinition[]; cacheMode?: CacheMode }
+export type CacheMode = "off" | "on-demand" | "precache"
 export type CatalogItem = {
   id: string
   type: string
@@ -62,7 +63,7 @@ export type CatalogDetail = CatalogItem & {
   videos?: { id: string; title: string; season: number; episode: number }[]
 }
 
-export type StreamAddon = { id: string; name: string; enabled: boolean; networkRoute: 'direct' | 'egress' | 'auto' }
+export type StreamAddon = { id: string; name: string; enabled: boolean; networkRoute: 'direct' | 'egress' | 'auto'; priority: number; timeoutMs: number }
 export type MediaCandidate = {
   sourceId: string
   sourceName: string
@@ -78,6 +79,7 @@ export type PlaybackSession = {
   status: 'probe_passed_not_browser_verified'
   sourceName: string
   name: string
+  nextAttempt?: number
 }
 
 export type ProviderStatus = {

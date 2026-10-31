@@ -80,18 +80,26 @@ function serve(options: {
         sourceName:'Test Addon',index:0,key:'opaque-selection',name:'MP4 seguro',mode:'direct_play_candidate'}],
       providersChecked:1,providersFailed:0,
     })
-    if (path.endsWith('/media/sessions')) return fakeResponse({
-      path:'/api/v1/media/play/opaque-ticket-without-provider-credentials',
-      mode:'direct_play',status:'probe_passed_not_browser_verified',
-      name:'MP4 seguro',sourceName:'Test Addon',
-    },201)
+    if (path.endsWith('/media/auto')) return options.providerDenied
+      ? fakeResponse({error:'nenhuma fonte compatível foi encontrada'},422)
+      : fakeResponse({
+        path:'/api/v1/media/play/opaque-ticket-without-provider-credentials',
+        mode:'direct_play',status:'probe_passed_not_browser_verified',
+        name:'Reprodução YuFlix',sourceName:'',nextAttempt:1,
+      },201)
     if (path.endsWith('/media/addons')) return fakeResponse({sources:options.streamSettings ? [{
       id:'123e4567-e89b-12d3-a456-426614174000',name:'Test Provider',
-      enabled:true,networkRoute:'direct',
+      enabled:true,networkRoute:'direct',priority:500,timeoutMs:5000,
     }] : []})
     if (path.endsWith('/admin/network/egress')) return fakeResponse({
       availableForSources:options.egressAvailable ? {'123e4567-e89b-12d3-a456-426614174000':true} : {},
     })
+    if (path.endsWith('/policy') && init?.method==='PUT') {
+      const values=JSON.parse(String(init.body??'{}'))
+      return fakeResponse({source:{id:'123e4567-e89b-12d3-a456-426614174000',
+        name:'Test Provider',enabled:true,networkRoute:'direct',
+        priority:values.priority,timeoutMs:values.timeoutMs}})
+    }
     if (path.endsWith('/route') && init?.method==='PUT') {
       const selection=JSON.parse(String(init.body??'{}'))
       return fakeResponse({source:{id:'123e4567-e89b-12d3-a456-426614174000',
@@ -211,7 +219,7 @@ describe('YuFlix authentication experience', () => {
     const card = await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})
     await actor.click(card)
     expect(await screen.findByRole('heading',{level:1,name:'The Matrix'})).toBeTruthy()
-    expect(screen.getByRole('heading',{name:'Fontes de vídeo'})).toBeTruthy()
+    expect(screen.getByRole('heading',{name:'Reprodução',})).toBeTruthy()
     expect(screen.getByRole('navigation',{name:'Principal'})).toBeTruthy()
     await actor.click(screen.getByRole('link',{name:'Início'}))
     expect(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})).toBeTruthy()
@@ -223,11 +231,10 @@ describe('YuFlix authentication experience', () => {
     route('/')
     await actor.click(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'}))
     await screen.findByRole('heading',{name:'The Matrix',level:1})
-    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
-    await actor.click(await screen.findByRole('button',{name:'Testar Direct Play'}))
+    await actor.click(screen.getByRole('button',{name:/Assistir agora/}))
     const player=await screen.findByLabelText('Reprodutor YuFlix')
     expect(player.getAttribute('src')).toMatch(/^\/api\/v1\/media\/play\//)
-    const sessions=calls.mock.calls.filter(call=>String(call[0]).endsWith('/media/sessions'))
+    const sessions=calls.mock.calls.filter(call=>String(call[0]).endsWith('/media/auto'))
     expect(sessions).toHaveLength(1)
     expect(sessions[0][1]?.credentials).toBe('same-origin')
     expect(screen.queryByText(/https:\/\/video-provider/)).toBeNull()
@@ -243,10 +250,10 @@ describe('YuFlix authentication experience', () => {
     const episode=screen.getByRole('button',{name:/Piloto/})
     await actor.click(episode)
     expect(episode.getAttribute('aria-pressed')).toBe('true')
-    await screen.findByRole('heading',{name:'Fontes de vídeo'})
-    expect(calls.mock.calls.filter(call => String(call[0]).includes('/media/streams?'))).toHaveLength(0)
-    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
-    await waitFor(()=>expect(calls.mock.calls.some(call=>String(call[0]).includes('tt0903747%3A1%3A1'))).toBe(true))
+    await screen.findByRole('heading',{name:'Reprodução',})
+    expect(calls.mock.calls.filter(call => String(call[0]).endsWith('/media/auto'))).toHaveLength(0)
+    await actor.click(screen.getByRole('button',{name:/Assistir agora/}))
+    await waitFor(()=>expect(calls.mock.calls.some(call=>String(call[0]).endsWith('/media/auto') && JSON.parse(String(call[1]?.body)).id==='tt0903747:1:1')).toBe(true))
   })
 
   it('opens the player as a focused dialog and closes it with Escape', async () => {
@@ -254,15 +261,13 @@ describe('YuFlix authentication experience', () => {
     const actor=userEvent.setup()
     route('/')
     await actor.click(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'}))
-    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
-    const action=await screen.findByRole('button',{name:'Testar Direct Play'})
-    await actor.click(action)
-    const dialog=await screen.findByRole('dialog',{name:/Reprodução: MP4 seguro/})
+    await actor.click(screen.getByRole('button',{name:/Assistir agora/}))
+    const dialog=await screen.findByRole('dialog',{name:/Reprodução: The Matrix/})
     expect(dialog.getAttribute('aria-modal')).toBe('true')
     expect((document.activeElement as HTMLElement).getAttribute('aria-label')).toBe('Fechar player')
     await actor.keyboard('{Escape}')
     await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
-    expect(screen.getByRole('button',{name:'Testar Direct Play'})).toBeTruthy()
+    expect(screen.getByRole('button',{name:/Assistir agora/})).toBeTruthy()
   })
 
   it('deep links to a specific administration section', async () => {
@@ -272,15 +277,17 @@ describe('YuFlix authentication experience', () => {
     expect(screen.getByRole('button',{name:'Reprodução'}).getAttribute('aria-current')).toBe('page')
   })
 
-  it('explains an upstream 403 without exposing provider URLs', async () => {
+  it('keeps provider failures private to viewers', async () => {
     serve({session:admin,catalog:true,providerDenied:true})
     const actor=userEvent.setup()
     route('/')
     await actor.click(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'}))
     await screen.findByRole('heading',{name:'The Matrix',level:1})
-    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
-    expect(await screen.findByText(/Acesso recusado pelo provedor \(HTTP 403\)/)).toBeTruthy()
+    await actor.click(screen.getByRole('button',{name:/Assistir agora/}))
+    expect(await screen.findByText(/Nenhuma fonte compatível está disponível/)).toBeTruthy()
     expect(screen.queryByText('1 provedor(es) não responderam.')).toBeNull()
+    expect(screen.queryByText(/BestCine/)).toBeNull()
+    expect(screen.queryByText(/BestCine/)).toBeNull()
     expect(screen.queryByText(/manifest\.json/)).toBeNull()
   })
 
@@ -293,6 +300,20 @@ describe('YuFlix authentication experience', () => {
     expect(selector.value).toBe('direct')
     expect(selector.querySelectorAll('option')).toHaveLength(1)
     expect(selector.textContent).toContain('Direto')
+  })
+
+  it('saves per-provider priority and timeout through the admin API', async () => {
+    const calls=serve({session:admin,streamSettings:true})
+    const actor=userEvent.setup()
+    route('/admin?section=streams')
+    const priority=await screen.findByLabelText('Prioridade de Test Provider')
+    await actor.clear(priority)
+    await actor.type(priority,'12')
+    await actor.selectOptions(screen.getByLabelText('Timeout de Test Provider'),'7000')
+    await actor.click(screen.getByRole('button',{name:'Salvar regras'}))
+    await waitFor(()=>expect(calls.mock.calls.filter(call=>String(call[0]).endsWith('/policy'))).toHaveLength(1))
+    const saved=calls.mock.calls.find(call=>String(call[0]).endsWith('/policy'))
+    expect(JSON.parse(String(saved?.[1]?.body))).toEqual({priority:12,timeoutMs:7000})
   })
 
   it('permits configured egress per addon and persists the mode through admin API', async () => {
