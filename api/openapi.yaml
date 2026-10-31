@@ -59,6 +59,71 @@ paths:
         - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
         '204': {description: Removed}
+  /media/addons:
+    get:
+      summary: List shared stream addons without manifest URLs
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Stream addon names and IDs}
+  /media/streams:
+    get:
+      summary: Discover candidate progressive MP4 streams without exposing provider URLs
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: type, in: query, required: true, schema: {type: string, enum: [movie, series]}}
+        - {name: id, in: query, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Candidate list only, not proof of successful playback}
+        '429': {description: Too many concurrent source checks}
+  /media/sessions:
+    post:
+      summary: Probe a selected public MP4 and issue a user-scoped temporary streaming session
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceId, type, id, index, candidateKey]
+              properties:
+                sourceId: {type: string, format: uuid}
+                type: {type: string, enum: [movie, series]}
+                id: {type: string}
+                index: {type: integer, minimum: 0, maximum: 11}
+                candidateKey: {type: string, description: Opaque binding returned by stream discovery}
+      responses:
+        '201': {description: Short MP4 probe passed, with an opaque same-origin play path}
+        '422': {description: MP4 or HTTP Range verification failed}
+        '429': {description: Concurrent or ticket capacity limit}
+  /media/play/{token}:
+    get:
+      summary: Stream authorized progressive MP4 with support for single byte ranges
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: token, in: path, required: true, schema: {type: string}}
+        - {name: Range, in: header, required: false, schema: {type: string}}
+      responses:
+        '200': {description: MP4 body from source, if no Range specified}
+        '206': {description: Partial MP4 content with Content-Range}
+        '401': {description: Login required}
+        '404': {description: Ticket invalid or belongs to another user}
+        '416': {description: Invalid or multiple byte ranges}
+  /admin/media/addons:
+    post:
+      summary: Validate and register a public Stremio stream manifest (admin)
+      security: [{sessionCookie: []}]
+      responses:
+        '201': {description: Shared stream addon registered}
+        '422': {description: No supported stream resource}
+  /admin/media/addons/{sourceID}:
+    delete:
+      summary: Remove stream provider (admin)
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Stream addon removed}
   /auth/login:
     post:
       summary: Log in with an individual username and password

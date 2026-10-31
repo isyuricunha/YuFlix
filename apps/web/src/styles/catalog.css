@@ -62,3 +62,30 @@
  .yf-title-page__background { width:100%; height:330px; opacity:.2; mask-image:none; }
  .yf-title-page__content h1 { font-size:45px; }
 }
+
+/* Playback controls use the existing YuTheme palette and browser-native video features. */
+.yf-playback { margin-top:42px; max-width:700px; }
+.yf-playback__heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.yf-playback__heading h2 { font-size:25px; letter-spacing:-.04em; margin:9px 0; }
+.yf-playback__heading>button,.yf-playback__source button { border:1px solid var(--yu-bg-surface-active); background:var(--text-primary); color:var(--text-inverse); border-radius:999px; font-weight:720; padding:13px 18px; font-size:12px; }
+.yf-playback__description,.yf-playback__notice { font-size:13px; color:var(--text-secondary); line-height:1.7; }
+.yf-playback__notice a { color:var(--text-primary); text-underline-offset:3px; }
+.yf-playback__sources { border-top:1px solid var(--yu-bg-surface-active); margin-top:25px; }
+.yf-playback__source { padding:17px 0; border-bottom:1px solid var(--yu-bg-surface-active); display:flex; justify-content:space-between; align-items:center; gap:20px; }
+.yf-playback__source>div { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.yf-playback__source strong { font-size:14px; }
+.yf-playback__source span { font-size:12px; color:var(--text-secondary); overflow-wrap:anywhere; }
+.yf-playback__source button { white-space:nowrap; }
+.yf-playback__active { margin-top:25px; }
+.yf-playback__active-heading { display:flex; justify-content:space-between; gap:20px; font-size:13px; margin-bottom:15px; }
+.yf-playback__active-heading span,.yf-playback__active>p { color:var(--text-secondary); font-size:12px; line-height:1.6; }
+.yf-playback__active video { display:block; width:100%; max-height:70svh; aspect-ratio:16/9; background:var(--yu-bg-canvas); border-radius:14px; }
+.yf-title-page__episodes>div>button.yf-episode { display:flex; justify-content:space-between; gap:15px; align-items:center; width:100%; text-align:left; border:0; border-bottom:1px solid var(--yu-bg-surface-active); background:transparent; color:var(--text-primary); padding:18px 12px; }
+.yf-title-page__episodes>div>button.yf-episode:hover,.yf-title-page__episodes>div>button.yf-episode.is-selected {background:var(--yu-bg-surface); }
+.yf-episode strong {font-size:14px;}
+.yf-episode small {color:var(--text-secondary);}
+@media(max-width:560px){
+ .yf-playback__heading {align-items:start;flex-direction:column;}
+ .yf-playback__source {align-items:start;flex-direction:column;}
+ .yf-playback__source button {width:100%;}
+}

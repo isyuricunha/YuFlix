@@ -88,6 +88,11 @@ func AllowedIP(ip netip.Addr) bool {
 			return false
 		}
 	} else if ip.Is6() {
+		// Reject non-routable transition mechanisms and special-use IPv6 ranges.
+		if !netip.MustParsePrefix("2000::/3").Contains(ip) ||
+			netip.MustParsePrefix("2002::/16").Contains(ip) {
+			return false
+		}
 		if netip.MustParsePrefix("2001:db8::/32").Contains(ip) || netip.MustParsePrefix("2001::/23").Contains(ip) {
 			return false
 		}

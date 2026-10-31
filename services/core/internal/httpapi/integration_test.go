@@ -132,6 +132,29 @@ func TestIntegrationPostgres17(t *testing.T) {
 		adminCookie, "https://stream.example.com"); response.Code != 204 {
 		t.Fatalf("admin could not remove shared catalog: %d", response.Code)
 	}
+	// Stream providers are shared, but only administrators may configure them.
+	streamAddon, err := store.AddStreamAddon(ctx, "Sample Streams", "https://provider.example.com/manifest.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp = call("GET", "/api/v1/media/addons", "",
+		memberCookie.Name+"="+memberCookie.Value, ""); resp.Code != 200 ||
+		strings.Contains(resp.Body.String(), "provider.example.com") {
+		t.Fatalf("member stream-list error or leaked provider URL: %d", resp.Code)
+	}
+	if resp = call("DELETE", "/api/v1/admin/media/addons/"+streamAddon.ID, "",
+		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 403 {
+		t.Fatalf("member removed stream source: %d", resp.Code)
+	}
+	if resp = call("POST", "/api/v1/media/sessions",
+		`{"sourceId":"invalid","type":"movie","id":"tt123","index":0}`,
+		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 400 {
+		t.Fatalf("invalid session accepted: %d", resp.Code)
+	}
+	if resp = call("DELETE", "/api/v1/admin/media/addons/"+streamAddon.ID, "",
+		adminCookie, "https://stream.example.com"); resp.Code != 204 {
+		t.Fatalf("admin removal failed: %d", resp.Code)
+	}
 	if resp = call("POST", "/api/v1/auth/logout", "", adminCookie, "https://stream.example.com"); resp.Code != 204 {
 		t.Fatalf("logout %d", resp.Code)
 	}

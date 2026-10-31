@@ -61,3 +61,21 @@ export type CatalogDetail = CatalogItem & {
   genres?: string[]
   videos?: { id: string; title: string; season: number; episode: number }[]
 }
+
+export type StreamAddon = { id: string; name: string; enabled: boolean }
+export type MediaCandidate = {
+  sourceId: string
+  sourceName: string
+  index: number
+  name: string
+  title?: string
+  mode: 'direct_play_candidate'
+  key: string
+}
+export type PlaybackSession = {
+  path: string
+  mode: 'direct_play'
+  status: 'probe_passed_not_browser_verified'
+  sourceName: string
+  name: string
+}

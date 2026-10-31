@@ -16,7 +16,7 @@ func TestPublicAddressValidation(t *testing.T) {
 	for _, addr := range []string{
 		"127.0.0.1", "::1", "10.12.0.1", "172.19.1.1",
 		"100.100.100.100", "169.254.169.254", "198.18.0.1", "::ffff:127.0.0.1",
-		"fc00::1", "2001:db8::1", "224.0.0.1", "203.0.113.10",
+		"fc00::1", "2001:db8::1", "2002:c0a8:0101::1", "64:ff9b::c0a8:0101", "224.0.0.1", "203.0.113.10",
 	} {
 		if AllowedIP(netip.MustParseAddr(addr)) {
 			t.Errorf("private/special IP allowed: %s", addr)

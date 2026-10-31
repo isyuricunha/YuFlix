@@ -64,6 +64,17 @@ function serve(options: {
       meta:{id:'tt0133093',type:'movie',name:'The Matrix',
         description:'A science fiction film.',releaseInfo:'1999',genres:['Sci-Fi']},
     })
+    if (path.includes('/media/streams?')) return fakeResponse({
+      streams:[{sourceId:'123e4567-e89b-12d3-a456-426614174000',
+        sourceName:'Test Addon',index:0,key:'opaque-selection',name:'MP4 seguro',mode:'direct_play_candidate'}],
+      providersChecked:1,providersFailed:0,
+    })
+    if (path.endsWith('/media/sessions')) return fakeResponse({
+      path:'/api/v1/media/play/opaque-ticket-without-provider-credentials',
+      mode:'direct_play',status:'probe_passed_not_browser_verified',
+      name:'MP4 seguro',sourceName:'Test Addon',
+    },201)
+    if (path.endsWith('/media/addons')) return fakeResponse({sources:[]})
     if (path.endsWith('/admin/users')) return fakeResponse({ users: [admin, member] })
     if (path.endsWith('/admin/settings')) return fakeResponse({ settings: {} })
     return fakeResponse({ error: 'not found' }, 404)
@@ -164,7 +175,23 @@ describe('YuFlix authentication experience', () => {
     const card = await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})
     await actor.click(card)
     expect(await screen.findByRole('heading',{level:1,name:'The Matrix'})).toBeTruthy()
-    expect(screen.getByText('Reprodução indisponível nesta etapa')).toBeTruthy()
+    expect(screen.getByRole('heading',{name:'Fontes de vídeo'})).toBeTruthy()
+  })
+
+  it('discovers video candidates and uses only same-origin media session URLs', async () => {
+    const calls=serve({session:admin,catalog:true})
+    const actor=userEvent.setup()
+    route('/')
+    await actor.click(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'}))
+    await screen.findByRole('heading',{name:'The Matrix',level:1})
+    await actor.click(screen.getByRole('button',{name:'Buscar fontes'}))
+    await actor.click(await screen.findByRole('button',{name:'Testar Direct Play'}))
+    const player=await screen.findByLabelText('Reprodutor YuFlix')
+    expect(player.getAttribute('src')).toMatch(/^\/api\/v1\/media\/play\//)
+    const sessions=calls.mock.calls.filter(call=>String(call[0]).endsWith('/media/sessions'))
+    expect(sessions).toHaveLength(1)
+    expect(sessions[0][1]?.credentials).toBe('same-origin')
+    expect(screen.queryByText(/https:\/\/video-provider/)).toBeNull()
   })
 
 })

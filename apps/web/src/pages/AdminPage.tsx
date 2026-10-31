@@ -4,8 +4,9 @@ import { APIError, api, type SettingValues, type User } from '../api'
 import { useAuth } from '../auth/AuthContext'
 import Brand from '../components/Brand'
 import CatalogSources from '../components/CatalogSources'
+import StreamSources from '../components/StreamSources'
 
-type Section = 'overview' | 'users' | 'preferences' | 'catalogs'
+type Section = 'overview' | 'users' | 'preferences' | 'catalogs' | 'streams'
 
 export default function AdminPage() {
   const { user, logout } = useAuth()
@@ -94,6 +95,7 @@ export default function AdminPage() {
             ['users', 'Usuários'],
             ['preferences', 'Preferências'],
             ['catalogs', 'Catálogos'],
+            ['streams', 'Reprodução'],
           ] as const).map(([key, label]) =>
             <button type="button" key={key} onClick={() => { setSection(key); setError(''); setNotice('') }}
               className={section === key ? 'is-active' : ''} aria-pressed={section === key}>
@@ -105,10 +107,11 @@ export default function AdminPage() {
       <main className="yf-admin__content">
         <div className="yf-admin__heading">
           <span className="yf-kicker">YUFLIX / ADMINISTRAÇÃO</span>
-          <h1>{section === 'overview' ? 'Visão geral' : section === 'users' ? 'Usuários' : section === 'catalogs' ? 'Catálogos' : 'Preferências'}</h1>
+          <h1>{section === 'overview' ? 'Visão geral' : section === 'users' ? 'Usuários' : section === 'catalogs' ? 'Catálogos' : section === 'streams' ? 'Reprodução' : 'Preferências'}</h1>
           <p>{section === 'overview' ? 'Gerencie seu espaço e as pessoas que têm acesso a ele.' :
             section === 'users' ? 'Contas individuais e permissões independentes.' :
             section === 'catalogs' ? 'Organize fontes compartilhadas de filmes e séries.' :
+            section === 'streams' ? 'Gerencie os addons que oferecem fontes de vídeo.' :
             'Escolha como seu conteúdo será apresentado e reproduzido.'}</p>
         </div>
         {loading && <p className="yf-admin__loading" role="status">Carregando suas configurações...</p>}
@@ -123,8 +126,10 @@ export default function AdminPage() {
               <button type="button" onClick={() => setSection('users')}>Gerenciar <span aria-hidden="true">→</span></button></div>
             <div><div><h2>Preferências</h2><p>Idioma e comportamento de reprodução.</p></div>
               <button type="button" onClick={() => setSection('preferences')}>Configurar <span aria-hidden="true">→</span></button></div>
-            <div><div><h2>Catálogos e reprodução</h2><p>Integração e player ainda em desenvolvimento.</p></div>
+            <div><div><h2>Catálogos</h2><p>Gerencie os provedores de metadados.</p></div>
               <button type="button" onClick={() => setSection('catalogs')}>Configurar <span aria-hidden="true">→</span></button></div>
+            <div><div><h2>Reprodução</h2><p>Adicione provedores e teste Direct Play MP4.</p></div>
+              <button type="button" onClick={() => setSection('streams')}>Configurar <span aria-hidden="true">→</span></button></div>
           </div>
         </section>}
 
@@ -161,6 +166,7 @@ export default function AdminPage() {
         </div>}
 
         {!loading && section === 'catalogs' && <CatalogSources />}
+        {!loading && section === 'streams' && <StreamSources />}
         {!loading && section === 'preferences' && <section className="yf-admin__preferences" aria-labelledby="settings-heading">
           <h2 id="settings-heading">Preferências gerais</h2>
           <p className="yf-admin__muted">Os valores são salvos no banco. A aplicação ao catálogo e ao player depende da conclusão desses recursos.</p>

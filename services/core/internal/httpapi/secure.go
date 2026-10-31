@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/isyuricunha/YuFlix/services/core/internal/catalog"
 	"github.com/isyuricunha/YuFlix/services/core/internal/db"
+	"github.com/isyuricunha/YuFlix/services/core/internal/media"
 )
 
 const cookieName = "__Host-yuflix_session"
@@ -36,6 +38,11 @@ type api struct {
 	passwordSlots chan struct{}
 	catalogClient *catalog.Client
 	cache         *catalogCache
+	direct        *media.Direct
+	video         *videoTickets
+	mediaSlots    chan struct{}
+	relaySlots    chan struct{}
+	streamKey     [32]byte
 }
 type transportKey struct{}
 
@@ -110,7 +117,10 @@ func (l *loginLimiter) allow(key string) bool {
 func (l *loginLimiter) reset(key string) { l.mu.Lock(); defer l.mu.Unlock(); delete(l.items, key) }
 func newAPI(o Options) *api {
 	a := &api{db: o.Database, origins: map[string]struct{}{}, trustProxy: o.TrustProxy,
-		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2), catalogClient: catalog.NewClient(), cache: &catalogCache{data: map[string]catalogCacheEntry{}}}
+		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2), catalogClient: catalog.NewClient(), cache: &catalogCache{data: map[string]catalogCacheEntry{}}, direct: media.NewDirect(), video: &videoTickets{items: map[string]videoTicket{}}, mediaSlots: make(chan struct{}, 4), relaySlots: make(chan struct{}, 8)}
+	if _, err := rand.Read(a.streamKey[:]); err != nil {
+		panic("secure media selection unavailable")
+	}
 	for _, origin := range append([]string{o.PublicOrigin}, o.AllowedOrigins...) {
 		if v, ok := validOrigin(origin, o.AllowInsecureHTTP); ok {
 			a.origins[v] = struct{}{}

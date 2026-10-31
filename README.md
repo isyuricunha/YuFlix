@@ -75,3 +75,5 @@ This repository intentionally contains no infrastructure-specific hostnames, IPs
 YuFlix is licensed under [AGPL-3.0-only](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for dependencies.
 
 - [Stremio catalog integration](docs/catalogs.md)
+
+- [Media Engine first playback milestone](docs/media-engine.md)
