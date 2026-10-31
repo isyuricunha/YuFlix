@@ -12,7 +12,8 @@ services:
     ports:
       - "${YUFLIX_EGRESS_BIND_IP:?Tailscale bind required}:62582:62582"
     read_only: true
-    tmpfs: [/tmp:size=16m,noexec,nosuid]
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     pids_limit: 48
