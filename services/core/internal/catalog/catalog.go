@@ -59,6 +59,7 @@ type Preview struct {
 	ReleaseInfo string `json:"releaseInfo,omitempty"`
 }
 type Detail struct {
+	IMDBID string `json:"imdb_id,omitempty"`
 	Preview
 	Genres []string `json:"genres,omitempty"`
 	Videos []struct {
@@ -292,7 +293,7 @@ func normalizeCatalogs(cs []Catalog) []Catalog {
 		if !identifier.MatchString(c.Type) || !identifier.MatchString(c.ID) || len(c.Name) > 120 || c.Name == "" {
 			continue
 		}
-		if c.Type != "movie" && c.Type != "series" {
+		if c.Type != "movie" && c.Type != "series" && c.Type != "anime" && c.Type != "collections" {
 			continue
 		} // TV and anime integrations follow after catalog proof.
 		required := false
@@ -349,7 +350,7 @@ func (c *Client) Catalog(ctx context.Context, manifestURL string, typ, id string
 	}
 	out := make([]Preview, 0, 25)
 	for _, p := range res.Metas {
-		if p.Type != typ || p.ID == "" || len(p.ID) > 160 || len(p.Name) > 200 || p.Name == "" {
+		if (p.Type != typ && !(typ == "anime" && p.Type == "series")) || p.ID == "" || len(p.ID) > 160 || len(p.Name) > 200 || p.Name == "" {
 			continue
 		}
 		p.Poster = safeImage(p.Poster)

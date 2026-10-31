@@ -1,10 +1,12 @@
-import { Link } from 'react-router'
+import { Link, useParams } from 'react-router'
 import { useState } from 'react'
 import CatalogHome from '../components/CatalogHome'
 import { useAuth } from '../auth/AuthContext'
 
 export default function HomePage() {
   const { user } = useAuth()
+  const { kind } = useParams()
+  const contentKind = kind === 'movie' || kind === 'series' || kind === 'anime' || kind === 'collections' ? kind : 'all'
   const [hasCatalog, setHasCatalog] = useState(false)
 
   return <div className="yf-home">
@@ -17,6 +19,6 @@ export default function HomePage() {
           <span className="yf-feature__status">O catálogo ainda está sendo preparado.</span>}
       </div>
     </section>}
-    <CatalogHome isAdmin={user?.role === 'admin'} onCatalogPresent={setHasCatalog} />
+    <CatalogHome initialKind={contentKind} isAdmin={user?.role === 'admin'} onCatalogPresent={setHasCatalog} />
   </div>
 }

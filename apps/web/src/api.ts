@@ -48,6 +48,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 
 export type CatalogDefinition = { type: string; id: string; name: string }
 export type CatalogSource = { id: string; name: string; enabled: boolean; catalogs: CatalogDefinition[]; cacheMode?: CacheMode }
+export type CatalogProvider = { id: string; name: string; description: string; category: string; ready: boolean; installed: boolean; note?: string }
 export type CacheMode = "off" | "on-demand" | "precache"
 export type CatalogItem = {
   id: string
@@ -59,6 +60,7 @@ export type CatalogItem = {
   releaseInfo?: string
 }
 export type CatalogDetail = CatalogItem & {
+  imdb_id?: string
   genres?: string[]
   videos?: { id: string; title: string; season: number; episode: number }[]
 }

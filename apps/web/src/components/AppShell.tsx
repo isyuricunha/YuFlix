@@ -41,6 +41,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Brand compact />
       <nav className="yf-shell__nav" aria-label="Principal">
         <NavLink to="/" end className={({ isActive }) => isActive || isTitle ? 'is-active' : ''}>Início</NavLink>
+        <NavLink to="/browse/movie">Filmes</NavLink>
+        <NavLink to="/browse/series">Séries</NavLink>
+        <NavLink to="/browse/anime">Animes</NavLink>
+        <NavLink to="/browse/collections">Coleções</NavLink>
+        <NavLink to="/search">Buscar</NavLink>
         {user?.role === 'admin' && <NavLink to="/admin" className={({ isActive }) => isActive ? 'is-active' : ''}>Ajustes</NavLink>}
       </nav>
       <div className="yf-shell__account">
