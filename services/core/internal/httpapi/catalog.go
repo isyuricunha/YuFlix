@@ -22,8 +22,10 @@ type catalogCacheEntry struct {
 	expiry time.Time
 }
 type catalogCache struct {
-	mu   sync.Mutex
-	data map[string]catalogCacheEntry
+	mu           sync.Mutex
+	data         map[string]catalogCacheEntry
+	refreshing   map[string]bool
+	refreshSlots chan struct{}
 }
 
 func (a *api) listCatalogSources(w http.ResponseWriter, r *http.Request) {
@@ -147,14 +149,27 @@ func (a *api) catalogItems(w http.ResponseWriter, r *http.Request) {
 	a.cache.mu.Lock()
 	cached, found := a.cache.data[cacheKey]
 	a.cache.mu.Unlock()
-	if found && time.Now().Before(cached.expiry) {
+	if src.CacheMode != "off" && found && time.Now().Before(cached.expiry) {
 		writeJSON(w, 200, map[string]any{"items": cached.items, "sourceId": src.ID, "catalog": catID})
+		return
+	}
+	if snapshot, age, ok := a.readSnapshot(ctx, id, typ, catID); src.CacheMode != "off" && ok && age < 48*time.Hour {
+		a.cache.mu.Lock()
+		a.cache.data[cacheKey] = catalogCacheEntry{items: snapshot, expiry: time.Now().Add(90 * time.Second)}
+		a.cache.mu.Unlock()
+		if age >= 6*time.Hour {
+			a.refreshSnapshot(cacheKey, id, src.ManifestURL, typ, catID)
+		}
+		writeJSON(w, 200, map[string]any{"items": snapshot, "sourceId": src.ID, "catalog": catID})
 		return
 	}
 	items, err := a.catalogClient.Catalog(ctx, src.ManifestURL, typ, catID)
 	if err != nil {
 		failure(w, 502, "provedor de catálogo temporariamente indisponível")
 		return
+	}
+	if src.CacheMode != "off" {
+		a.persistSnapshot(ctx, id, typ, catID, items)
 	}
 	a.cache.mu.Lock()
 	if len(a.cache.data) > 150 {

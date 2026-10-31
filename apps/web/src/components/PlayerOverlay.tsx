@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import type { PlaybackSession } from '../api'
 
-export default function PlayerOverlay({ session, onClose }: { session: PlaybackSession; onClose: () => void }) {
+export default function PlayerOverlay({ session, onClose, onEnded, onPlaybackError }: { session: PlaybackSession; onClose: () => void; onEnded?: () => void; onPlaybackError?: () => void }) {
   const player = useRef<HTMLVideoElement>(null)
   const dialog = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
@@ -71,7 +71,7 @@ export default function PlayerOverlay({ session, onClose }: { session: PlaybackS
         <div className="yf-player__identity">
           <span className="yf-kicker">REPRODUZINDO NO YUFLIX</span>
           <h2>{session.name}</h2>
-          <p>{session.sourceName} <span aria-hidden="true">·</span> Direct Play MP4</p>
+          <p>{session.sourceName || 'Reprodução automática'} <span aria-hidden="true">·</span> Direct Play</p>
         </div>
         <div className="yf-player__actions">
           <button type="button" onClick={() => void enterFullscreen()} aria-label="Tela cheia" className="yf-player__fullscreen">Tela cheia</button>
@@ -84,7 +84,7 @@ export default function PlayerOverlay({ session, onClose }: { session: PlaybackS
         <video ref={player} autoPlay controls playsInline preload="metadata" tabIndex={0} src={session.path}
           aria-label="Reprodutor YuFlix" onLoadedMetadata={() => setState('ready')}
           onPlaying={() => setState('ready')} onWaiting={() => setState('waiting')}
-          onEnded={() => setState('ended')} onError={() => setState('error')}/>
+          onEnded={() => {setState('ended');onEnded?.()}} onError={() => {setState('error');onPlaybackError?.()}}/>
       </div>
       <div className="yf-player__bottom">
         <span role="status" aria-live="polite" className={state === 'error' ? 'yf-player__error' : ''}>{status || 'Use os controles do vídeo para reproduzir, pausar e avançar.'}</span>

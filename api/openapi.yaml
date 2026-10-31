@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: YuFlix API
   version: 0.2.0
-  description: Account foundations. Real playback is not available.
+  description: Experimental automatic MP4 playback with authenticated scoped tickets. HLS and transcoding remain unavailable.
 servers:
   - url: /api/v1
 paths:
@@ -59,13 +59,7 @@ paths:
         - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
         '204': {description: Removed}
-  /media/addons:
-    get:
-      summary: List shared stream addons without manifest URLs
-      security: [{sessionCookie: []}]
-      responses:
-        '200': {description: Stream addon names and IDs}
-  /media/streams:
+  /admin/media/streams:
     get:
       summary: Discover candidate progressive MP4 streams without exposing provider URLs
       security: [{sessionCookie: []}]
@@ -75,7 +69,7 @@ paths:
       responses:
         '200': {description: Candidate list only, not proof of successful playback}
         '429': {description: Too many concurrent source checks}
-  /media/sessions:
+  /admin/media/sessions:
     post:
       summary: Probe a selected public MP4 and issue a user-scoped temporary streaming session
       security: [{sessionCookie: []}]
@@ -96,6 +90,27 @@ paths:
         '201': {description: Short MP4 probe passed, with an opaque same-origin play path}
         '422': {description: MP4 or HTTP Range verification failed}
         '429': {description: Concurrent or ticket capacity limit}
+  /media/auto:
+    post:
+      summary: Pick an authorized, supported playback source automatically without exposing addons
+      security: [{sessionCookie: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, id, attempt]
+              properties:
+                type: {type: string, enum: [movie, series]}
+                id: {type: string}
+                attempt: {type: integer, minimum: 0, maximum: 7}
+      responses:
+        '201': {description: Scoped temporary playback ticket with a same-origin path}
+        '404': {description: No source configured}
+        '422': {description: No compatible source could be verified}
+        '429': {description: Concurrent requests limited}
+        '504': {description: Search time budget exceeded}
   /media/play/{token}:
     get:
       summary: Stream authorized progressive MP4 with support for single byte ranges
@@ -110,6 +125,11 @@ paths:
         '404': {description: Ticket invalid or belongs to another user}
         '416': {description: Invalid or multiple byte ranges}
   /admin/media/addons:
+    get:
+      summary: Administrator-only list of stream addons and source policies
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Addon name, ID, priority, timeout and network route}
     post:
       summary: Validate and register a public Stremio stream manifest (admin)
       security: [{sessionCookie: []}]
@@ -132,6 +152,46 @@ paths:
       responses:
         '200': {description: Map of addon IDs to egress availability}
         '403': {description: Administrator access required}
+  /admin/catalog/sources/{sourceID}/cache:
+    put:
+      summary: Set per-catalog cache mode (admin)
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode]
+              properties:
+                mode: {type: string, enum: [off, on-demand, precache]}
+      responses:
+        '200': {description: Updated source cache mode}
+  /admin/catalog/cache:
+    put:
+      summary: Apply a cache mode to all catalog sources (admin)
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Updated safe catalog source summaries}
+  /admin/media/addons/{sourceID}/policy:
+    put:
+      summary: Set priority and timeout for one stream addon (admin)
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [priority, timeoutMs]
+              properties:
+                priority: {type: integer, minimum: 1, maximum: 1000}
+                timeoutMs: {type: integer, minimum: 1000, maximum: 10000}
+      responses:
+        '200': {description: Policy saved}
+        '400': {description: Invalid range}
   /admin/media/addons/{sourceID}/route:
     put:
       summary: Select Direct, private egress, or Automatic networking for one stream addon (admin)

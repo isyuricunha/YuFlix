@@ -9,6 +9,7 @@ export default function TitlePage() {
   const [item, setItem] = useState<CatalogDetail | null>(null)
   const [error, setError] = useState('')
   const [episodeId, setEpisodeId] = useState('')
+  const [autoNext, setAutoNext] = useState(false)
   const { user } = useAuth()
 
   useEffect(() => {
@@ -18,6 +19,7 @@ export default function TitlePage() {
     setItem(null)
     setError('')
     setEpisodeId('')
+    setAutoNext(false)
     api<{ meta: CatalogDetail }>('/catalog/sources/' + sourceId + '/meta' + query)
       .then(data => { if (active) setItem(data.meta) })
       .catch(() => { if (active) setError('Não foi possível carregar os detalhes deste título.') })
@@ -45,7 +47,7 @@ export default function TitlePage() {
           </div>
           <div className="yf-title-page__episode-list">{item.videos.slice(0, 30).map(ep => <button type="button"
             className={episodeId === ep.id ? 'yf-episode is-selected' : 'yf-episode'}
-            aria-pressed={episodeId === ep.id} key={ep.id} onClick={() => startTransition(() => setEpisodeId(ep.id))}>
+            aria-pressed={episodeId === ep.id} key={ep.id} onClick={() => {setAutoNext(false);startTransition(() => setEpisodeId(ep.id))}}>
             <span className="yf-episode__number">{String(ep.episode || '?').padStart(2, '0')}</span>
             <span className="yf-episode__title"><strong>{ep.title || 'Episódio ' + (ep.episode || '?')}</strong>
               <small>{ep.season ? 'Temporada ' + ep.season + ' · ' : ''}Episódio {ep.episode || '?'}</small>
@@ -53,10 +55,15 @@ export default function TitlePage() {
             <span className="yf-episode__arrow" aria-hidden="true">→</span>
           </button>)}</div>
         </section>}
-        {item.type === 'movie' ? <MediaSources type="movie" videoId={item.id} isAdmin={user?.role === 'admin'} /> :
+        {item.type === 'movie' ? <MediaSources type="movie" videoId={item.id} contentTitle={item.name} isAdmin={user?.role === 'admin'} /> :
           <ViewTransition name="yf-episode-media">
             <div key={episodeId || 'none'} className="yf-title-page__episode-media">
-              {episodeId ? <MediaSources type="series" videoId={episodeId} isAdmin={user?.role === 'admin'} /> :
+              {episodeId ? <MediaSources type="series" videoId={episodeId} contentTitle={item.name} isAdmin={user?.role === 'admin'}
+                   autoStart={autoNext} onNext={() => {
+                     const index = item.videos?.findIndex(ep => ep.id === episodeId) ?? -1
+                     const next = item.videos?.[index + 1]
+                     if (next) { setAutoNext(true); setEpisodeId(next.id) }
+                   }} /> :
                 <div className="yf-title-page__not-ready"><strong>Escolha um episódio</strong>
                   <span>Selecione um episódio acima para encontrar fontes de vídeo.</span></div>}
             </div>

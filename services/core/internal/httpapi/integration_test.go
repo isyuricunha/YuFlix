@@ -120,6 +120,19 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := store.SaveCatalogSnapshot(ctx, source.ID, "movie", "top",
+		[]byte(`[{"id":"tt123","type":"movie","name":"Cached"}]`)); err != nil {
+		t.Fatal("cannot persist catalog snapshot", err)
+	}
+	if cached, _, err := store.CatalogSnapshot(ctx, source.ID, "movie", "top"); err != nil || !strings.Contains(string(cached), "Cached") {
+		t.Fatal("catalog snapshot not readable")
+	}
+	if changed, err := store.SetCatalogCacheMode(ctx, source.ID, "off"); err != nil || changed.CacheMode != "off" {
+		t.Fatal("could not disable source cache", err)
+	}
+	if _, _, err := store.CatalogSnapshot(ctx, source.ID, "movie", "top"); err == nil {
+		t.Fatal("disabled cache retained persisted catalog")
+	}
 	response := call("GET", "/api/v1/catalog/sources", "", memberCookie.Name+"="+memberCookie.Value, "")
 	if response.Code != 200 || strings.Contains(response.Body.String(), "v3-cinemeta.strem.io") {
 		t.Fatalf("catalog sources inaccessible or manifest URL exposed: %d", response.Code)
@@ -138,9 +151,8 @@ func TestIntegrationPostgres17(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp = call("GET", "/api/v1/media/addons", "",
-		memberCookie.Name+"="+memberCookie.Value, ""); resp.Code != 200 ||
-		strings.Contains(resp.Body.String(), "provider.example.com") {
-		t.Fatalf("member stream-list error or leaked provider URL: %d", resp.Code)
+		memberCookie.Name+"="+memberCookie.Value, ""); resp.Code != 404 {
+		t.Fatalf("member accessed provider configuration: %d", resp.Code)
 	}
 	if resp = call("DELETE", "/api/v1/admin/media/addons/"+streamAddon.ID, "",
 		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 403 {
@@ -148,6 +160,19 @@ func TestIntegrationPostgres17(t *testing.T) {
 	}
 	if streamAddon.NetworkRoute != "direct" {
 		t.Fatal("new addons must use direct transport")
+	}
+	if streamAddon.Priority != 500 || streamAddon.TimeoutMs != 5000 {
+		t.Fatal("unsafe source default policy")
+	}
+	policyPath := "/api/v1/admin/media/addons/" + streamAddon.ID + "/policy"
+	if resp = call("PUT", policyPath, `{"priority":0,"timeoutMs":5000}`,
+		adminCookie, "https://stream.example.com"); resp.Code != 400 {
+		t.Fatal("accepted invalid priority")
+	}
+	if resp = call("PUT", policyPath, `{"priority":12,"timeoutMs":7000}`,
+		adminCookie, "https://stream.example.com"); resp.Code != 200 ||
+		!strings.Contains(resp.Body.String(), `"priority":12`) {
+		t.Fatal("failed to save stream policy")
 	}
 	memberCookieString := memberCookie.Name + "=" + memberCookie.Value
 	routePath := "/api/v1/admin/media/addons/" + streamAddon.ID + "/route"
@@ -174,8 +199,8 @@ func TestIntegrationPostgres17(t *testing.T) {
 	}
 	if resp = call("POST", "/api/v1/media/sessions",
 		`{"sourceId":"invalid","type":"movie","id":"tt123","index":0}`,
-		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 400 {
-		t.Fatalf("invalid session accepted: %d", resp.Code)
+		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 404 {
+		t.Fatalf("member access to manual sessions was accepted: %d", resp.Code)
 	}
 	if resp = call("DELETE", "/api/v1/admin/media/addons/"+streamAddon.ID, "",
 		adminCookie, "https://stream.example.com"); resp.Code != 204 {

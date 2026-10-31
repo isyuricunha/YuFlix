@@ -1,0 +1,17 @@
+.yf-playback--automatic{max-width:760px;margin-top:44px;padding-top:24px;border-top:1px solid var(--yu-bg-surface-active)}
+.yf-playback__play{display:inline-flex;align-items:center;gap:13px;justify-content:center;min-width:170px}
+.yf-playback__play span{font-size:13px}
+.yf-playback--automatic .yf-playback__notice{padding:14px 0;background:transparent}
+.yf-playback--automatic .yf-playback__notice button{border:1px solid var(--yu-bg-surface-active);border-radius:9px;background:var(--yu-bg-surface);color:var(--text-primary);padding:12px 17px}
+.yf-admin__source-controls input[type=number]{width:90px;min-height:42px;padding:7px 10px;background:var(--yu-bg-surface);border:1px solid var(--yu-bg-surface-active);border-radius:9px;color:var(--text-primary)}
+.yf-catalog-featured__backdrop{animation:yf-hero-picture 12s ease-out both}
+@keyframes yf-hero-picture{from{transform:scale(1.065);opacity:.35}to{transform:scale(1);opacity:.65}}
+@media(max-width:560px){.yf-playback--automatic .yf-playback__play{width:100%}.yf-catalog-featured__backdrop{animation:none}}
+@media(prefers-reduced-motion:reduce){.yf-catalog-featured__backdrop{animation:none}}
+
+.yf-admin__cache-all {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:26px 0;padding:18px;border:1px solid var(--yu-bg-surface-active);border-radius:12px;background:var(--yu-bg-surface)}
+.yf-admin__cache-all label{color:var(--text-secondary);font-size:13px;font-weight:640;margin-right:auto}
+.yf-admin__cache-all select{min-height:44px;min-width:160px;border-radius:9px;padding:0 12px;border:1px solid var(--yu-bg-surface-active);color:var(--text-primary);background:var(--yu-bg-input)}
+.yf-admin__cache-all button{min-height:44px;padding:0 16px;border-radius:9px;border:1px solid var(--yu-bg-surface-active);background:var(--yu-bg-surface-raised);color:var(--text-primary);font-size:12px;font-weight:700}
+.yf-admin__cache-all button:hover:not(:disabled){background:var(--yu-bg-surface-active)}
+@media(max-width:610px){.yf-admin__cache-all{flex-direction:column;align-items:stretch}.yf-admin__cache-all select,.yf-admin__cache-all button{width:100%}}
