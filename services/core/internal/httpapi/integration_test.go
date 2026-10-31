@@ -110,7 +110,31 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if memberLogin.Code != 200 {
 		t.Fatalf("member login %d", memberLogin.Code)
 	}
+	if response := call("GET", "/api/v1/admin/media/cache", "", adminCookie, ""); response.Code != 200 ||
+		!strings.Contains(response.Body.String(), `"mode":"automatic"`) ||
+		!strings.Contains(response.Body.String(), `"active":false`) {
+		t.Fatalf("invalid media cache defaults: %d: %s", response.Code, response.Body.String())
+	}
+	if response := call("PUT", "/api/v1/admin/media/cache",
+		`{"policy":{"mode":"manual","storage":"disk","maxMiB":50000,"maxConcurrent":2,"segmentSeconds":3,"idleSeconds":90,"cleanupGraceSeconds":15}}`,
+		adminCookie, "https://stream.example.com"); response.Code != 400 {
+		t.Fatalf("unsafe disk size accepted: %d", response.Code)
+	}
+	if response := call("PUT", "/api/v1/admin/media/cache",
+		`{"policy":{"mode":"manual","storage":"disk","maxMiB":512,"maxConcurrent":2,"segmentSeconds":4,"idleSeconds":120,"cleanupGraceSeconds":0}}`,
+		adminCookie, "https://stream.example.com"); response.Code != 200 ||
+		!strings.Contains(response.Body.String(), `"maxMiB":512`) {
+		t.Fatalf("media policy write failed: %d %s", response.Code, response.Body.String())
+	}
+	if response := call("GET", "/api/v1/admin/media/cache", "", adminCookie, ""); response.Code != 200 ||
+		!strings.Contains(response.Body.String(), `"maxMiB":512`) {
+		t.Fatal("media settings not persisted")
+	}
+
 	memberCookie := memberLogin.Result().Cookies()[0]
+	if response := call("GET", "/api/v1/admin/media/cache", "", memberCookie.Name+"="+memberCookie.Value, ""); response.Code != 403 {
+		t.Fatal("member accessed media cache settings")
+	}
 	if resp = call("GET", "/api/v1/admin/users", "", memberCookie.Name+"="+memberCookie.Value, ""); resp.Code != 403 {
 		t.Fatalf("member accessed admin %d", resp.Code)
 	}

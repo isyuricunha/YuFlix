@@ -15,3 +15,11 @@
 .yf-admin__cache-all button{min-height:44px;padding:0 16px;border-radius:9px;border:1px solid var(--yu-bg-surface-active);background:var(--yu-bg-surface-raised);color:var(--text-primary);font-size:12px;font-weight:700}
 .yf-admin__cache-all button:hover:not(:disabled){background:var(--yu-bg-surface-active)}
 @media(max-width:610px){.yf-admin__cache-all{flex-direction:column;align-items:stretch}.yf-admin__cache-all select,.yf-admin__cache-all button{width:100%}}
+
+.yf-media-cache{max-width:920px}
+.yf-media-cache__status{padding:16px 20px;margin:24px 0;border:1px solid var(--yu-bg-surface-active);border-radius:12px;background:var(--yu-bg-surface);color:var(--text-secondary);font-size:13px}
+.yf-media-cache .yf-admin__setting-action input[type=number]{width:108px;min-height:44px;padding:10px 12px;background:var(--yu-bg-surface);border:1px solid var(--yu-bg-surface-active);border-radius:10px;color:var(--text-primary);font:inherit}
+.yf-media-cache__actions{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap;margin:28px 0}
+.yf-media-cache__actions button{min-height:44px;padding:12px 18px;border:1px solid var(--yu-bg-surface-active);border-radius:10px;color:var(--text-primary);background:var(--yu-bg-surface);font-size:13px}
+.yf-media-cache__actions button:last-child{background:var(--text-primary);color:var(--text-inverse)}
+@media(max-width:560px){.yf-media-cache__actions button{flex:1}}

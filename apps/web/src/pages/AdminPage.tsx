@@ -3,14 +3,15 @@ import { useSearchParams } from 'react-router'
 import { APIError, api, type SettingValues, type User } from '../api'
 import CatalogSources from '../components/CatalogSources'
 import StreamSources from '../components/StreamSources'
+import MediaCacheSettings from '../components/MediaCacheSettings'
 
-type Section = 'overview' | 'users' | 'preferences' | 'catalogs' | 'streams'
+type Section = 'overview' | 'users' | 'preferences' | 'catalogs' | 'streams' | 'media'
 
 export default function AdminPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedSection = searchParams.get('section')
   const section: Section = requestedSection === 'users' || requestedSection === 'preferences' ||
-    requestedSection === 'catalogs' || requestedSection === 'streams' ? requestedSection : 'overview'
+    requestedSection === 'catalogs' || requestedSection === 'streams' || requestedSection === 'media' ? requestedSection : 'overview'
   function changeSection(value: Section) {
     setError('')
     setNotice('')
@@ -83,6 +84,7 @@ export default function AdminPage() {
             ['preferences', 'Preferências'],
             ['catalogs', 'Catálogos'],
             ['streams', 'Reprodução'],
+            ['media', 'Media Engine'],
           ] as const).map(([key, label]) =>
             <button type="button" key={key} onClick={() => changeSection(key)}
               className={section === key ? 'is-active' : ''} aria-current={section === key ? 'page' : undefined}>
@@ -96,11 +98,12 @@ export default function AdminPage() {
           <div className="yf-admin__panel" key={section}>
         <div className="yf-admin__heading">
           <span className="yf-kicker">YUFLIX / ADMINISTRAÇÃO</span>
-          <h1>{section === 'overview' ? 'Visão geral' : section === 'users' ? 'Usuários' : section === 'catalogs' ? 'Catálogos' : section === 'streams' ? 'Reprodução' : 'Preferências'}</h1>
+          <h1>{section === 'overview' ? 'Visão geral' : section === 'users' ? 'Usuários' : section === 'catalogs' ? 'Catálogos' : section === 'streams' ? 'Reprodução' : section === 'media' ? 'Media Engine' : 'Preferências'}</h1>
           <p>{section === 'overview' ? 'Gerencie seu espaço e as pessoas que têm acesso a ele.' :
             section === 'users' ? 'Contas individuais e permissões independentes.' :
             section === 'catalogs' ? 'Organize fontes compartilhadas de filmes e séries.' :
             section === 'streams' ? 'Gerencie os addons que oferecem fontes de vídeo.' :
+            section === 'media' ? 'Cache, limites de recursos e limpeza do HLS.' :
             'Escolha como seu conteúdo será apresentado e reproduzido.'}</p>
         </div>
         {loading && <p className="yf-admin__loading" role="status">Carregando suas configurações...</p>}
@@ -156,6 +159,7 @@ export default function AdminPage() {
 
         {!loading && section === 'catalogs' && <CatalogSources />}
         {!loading && section === 'streams' && <StreamSources />}
+        {!loading && section === 'media' && <MediaCacheSettings />}
         {!loading && section === 'preferences' && <section className="yf-admin__preferences" aria-labelledby="settings-heading">
           <h2 id="settings-heading">Preferências gerais</h2>
           <p className="yf-admin__muted">Os valores são salvos no banco. A aplicação ao catálogo e ao player depende da conclusão desses recursos.</p>

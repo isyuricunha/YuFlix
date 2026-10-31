@@ -21,6 +21,7 @@ type HLSSpec struct {
 	VideoIndex      int
 	AudioIndex      int // -1 means no audio track
 	SeekSeconds     float64
+	SegmentSeconds  int
 	Plan            Plan
 	HDRTransfer     string
 }
@@ -39,6 +40,12 @@ func HLSArguments(spec HLSSpec) ([]string, error) {
 		spec.AudioIndex < -1 || spec.AudioIndex > 255 ||
 		math.IsNaN(spec.SeekSeconds) || math.IsInf(spec.SeekSeconds, 0) ||
 		spec.SeekSeconds < 0 || spec.SeekSeconds > 24*60*60 {
+		return nil, ErrInvalidHLSPlan
+	}
+	if spec.SegmentSeconds == 0 {
+		spec.SegmentSeconds = 3
+	}
+	if spec.SegmentSeconds < 2 || spec.SegmentSeconds > 10 {
 		return nil, ErrInvalidHLSPlan
 	}
 	if spec.Plan.Mode != Remux && spec.Plan.Mode != TranscodeAudio && spec.Plan.Mode != TranscodeVideo {
@@ -61,7 +68,7 @@ func HLSArguments(spec HLSSpec) ([]string, error) {
 	if spec.SeekSeconds > 0 {
 		args = append(args, "-ss", strconv.FormatFloat(spec.SeekSeconds, 'f', 3, 64))
 	}
-	args = append(args, "-i", spec.InputPath, "-map", fmt.Sprintf("0:%d", spec.VideoIndex))
+	args = append(args, "-re", "-i", spec.InputPath, "-map", fmt.Sprintf("0:%d", spec.VideoIndex))
 	if spec.AudioIndex >= 0 {
 		args = append(args, "-map", fmt.Sprintf("0:%d", spec.AudioIndex))
 	} else {
@@ -81,7 +88,7 @@ func HLSArguments(spec HLSSpec) ([]string, error) {
 			args = append(args, "-c:a", "aac", "-b:a", "128k")
 		}
 	}
-	args = append(args, "-f", "hls", "-hls_time", "3", "-hls_list_size", "6",
+	args = append(args, "-f", "hls", "-hls_time", strconv.Itoa(spec.SegmentSeconds), "-hls_list_size", "6",
 		"-hls_delete_threshold", "2", "-hls_flags", "delete_segments+temp_file",
 		"-hls_segment_filename", spec.SegmentTemplate, "-y", spec.PlaylistPath)
 	return args, nil
