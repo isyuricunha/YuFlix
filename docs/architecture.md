@@ -5,8 +5,8 @@
 - Core: Go HTTP service with liveness, readiness and a public, non-sensitive status endpoint.
 - Web: single-origin React application; the web gateway forwards /api to Core.
 - Media planning: pure Go decision logic to decide Direct Play, remux or selective transcode. It does not probe, download or play media.
-- Persistence: PostgreSQL 17 via pgx and sqlc is planned; no database is connected in this milestone.
-- Authentication, admin configuration and actual media routes are not enabled yet. Sensitive endpoints must never be introduced unprotected.
+- Persistence: PostgreSQL 17 schema and pgx pool support users, sessions, settings, and future progress. No production database is connected yet; sqlc generation is pending.
+- Authentication uses Argon2id, revocable sessions and admin RBAC. Endpoints fail closed until DB migrations and HTTPS are configured. Actual media routes do not exist.
 - YuTheme is imported as an external dependency; do not duplicate or override its palette.
 
 ## Target data flow
@@ -21,7 +21,7 @@ Direct Play takes precedence. Remux copies supported audio/video codecs into an 
 
 ## Deployment topology
 
-Two containers in the foundation: Core and Web. The web gateway binds to loopback only. Media worker and PostgreSQL integration are intentionally deferred to avoid deploying a non-functional mock player. Support both native Go binaries and Compose; existing third-party media services are never modified.
+Two containers in the foundation: Core and Web. The web gateway binds to a high host port on all interfaces; no firewall or DNS changes are made. Media worker and PostgreSQL integration are intentionally deferred to avoid deploying a non-functional mock player. Support both native Go binaries and Compose; existing third-party media services are never modified.
 
 ## Roadmap
 

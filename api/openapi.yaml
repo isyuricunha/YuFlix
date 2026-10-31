@@ -1,40 +1,100 @@
 openapi: 3.1.0
 info:
   title: YuFlix API
-  version: 0.1.0
-  description: Foundation API. Playback, authentication and private endpoints are not available yet.
+  version: 0.2.0
+  description: Account foundations. Real playback is not available.
 servers:
   - url: /api/v1
 paths:
   /system/info:
     get:
-      summary: Public, non-sensitive instance metadata
-      operationId: getSystemInfo
+      summary: Public, non-sensitive instance status
       responses:
-        "200":
-          description: Public instance metadata
+        '200':
+          description: Status
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SystemInfo"
+                $ref: '#/components/schemas/SystemInfo'
+  /auth/login:
+    post:
+      summary: Log in with an individual username and password
+      description: Requires configured database and HTTPS public origin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: {type: string}
+                password: {type: string, format: password}
+      responses:
+        '200': {description: Secure cookie session established}
+        '401': {description: Invalid credentials}
+        '403': {description: HTTPS and matching Origin required}
+        '429': {description: Rate limited}
+        '503': {description: Database not activated}
+  /auth/me:
+    get:
+      summary: Current account
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Account information}
+        '401': {description: Unauthorized}
+  /auth/logout:
+    post:
+      summary: Revoke current session
+      security: [{sessionCookie: []}]
+      responses:
+        '204': {description: Signed out}
+  /admin/users:
+    get:
+      summary: List users (admin)
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Users}
+        '403': {description: Not administrator}
+    post:
+      summary: Add independent user (admin)
+      security: [{sessionCookie: []}]
+      responses:
+        '201': {description: Created}
+        '403': {description: Not administrator}
+  /admin/settings:
+    get:
+      summary: Read stored preferences (admin)
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Preferences}
+  /admin/settings/{key}:
+    put:
+      summary: Store a supported preference (admin)
+      security: [{sessionCookie: []}]
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema: {type: string}
+      responses:
+        '200': {description: Stored preference}
+        '400': {description: Invalid value}
 components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-yuflix_session
   schemas:
     SystemInfo:
       type: object
-      additionalProperties: false
-      required: [name, slogan, apiVersion, phase, playbackReady]
+      required: [name, slogan, apiVersion, phase, playbackReady, databaseReady, authenticationReady]
       properties:
-        name:
-          type: string
-          const: YuFlix
-        slogan:
-          type: string
-        apiVersion:
-          type: string
-          const: v1
-        phase:
-          type: string
-          const: foundation
-        playbackReady:
-          type: boolean
-          const: false
+        name: {type: string, const: YuFlix}
+        slogan: {type: string}
+        apiVersion: {type: string, const: v1}
+        phase: {type: string}
+        playbackReady: {type: boolean, const: false}
+        databaseReady: {type: boolean}
+        authenticationReady: {type: boolean}

@@ -1,6 +1,9 @@
 name: yuflix
 services:
   core:
+    env_file:
+      - path: ./.env.production
+        required: false
     build:
       context: ./services/core
     restart: unless-stopped
@@ -35,7 +38,7 @@ services:
     mem_limit: 256m
     cpus: 1.0
     ports:
-      - "127.0.0.1:62471:62471"
+      - "0.0.0.0:62471:62471"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:62471/healthz"]
       interval: 30s

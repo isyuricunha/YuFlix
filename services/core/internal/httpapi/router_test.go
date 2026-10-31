@@ -16,7 +16,7 @@ func TestPublicRoutes(t *testing.T) {
 		{"/healthz", 200},
 		{"/readyz", 200},
 		{"/api/v1/system/info", 200},
-		{"/api/v1/admin/status", 404},
+		{"/api/v1/admin/status", 503},
 		{"/api/v1/playback/start", 404},
 	} {
 		t.Run(tc.path, func(t *testing.T) {

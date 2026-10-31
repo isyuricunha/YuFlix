@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AccountPanel from './AccountPanel'
 
 type SystemInfo = {
   name: string
@@ -6,6 +7,8 @@ type SystemInfo = {
   apiVersion: string
   phase: 'foundation'
   playbackReady: boolean
+  databaseReady: boolean
+  authenticationReady: boolean
 }
 
 type State =
@@ -78,8 +81,8 @@ export default function App() {
               <strong>{available ? system.data.apiVersion.toUpperCase() : '...'}</strong>
             </div>
             <div className="detail">
-              <span>Fundação</span>
-              <strong>{available ? 'Operacional' : system.kind === 'loading' ? 'Verificando' : 'Sem conexão'}</strong>
+              <span>Banco de dados</span>
+              <strong>{available && system.data.databaseReady ? 'Conectado' : 'Aguardando configuração'}</strong>
             </div>
             <div className="detail">
               <span>Reprodução</span>
@@ -91,6 +94,7 @@ export default function App() {
             O player e os catálogos só serão disponibilizados após testes reais.
           </p>
         </section>
+        <AccountPanel enabled={available && system.data.authenticationReady} databaseReady={available && system.data.databaseReady} />
       </main>
       <footer className="footer">
         <span>YUFLIX</span>

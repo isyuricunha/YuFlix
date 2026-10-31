@@ -1,22 +1,31 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
 type systemInfo struct {
-	Name          string `json:"name"`
-	Slogan        string `json:"slogan"`
-	APIVersion    string `json:"apiVersion"`
-	Phase         string `json:"phase"`
-	PlaybackReady bool   `json:"playbackReady"`
+	Name                string `json:"name"`
+	Slogan              string `json:"slogan"`
+	APIVersion          string `json:"apiVersion"`
+	Phase               string `json:"phase"`
+	PlaybackReady       bool   `json:"playbackReady"`
+	DatabaseReady       bool   `json:"databaseReady"`
+	AuthenticationReady bool   `json:"authenticationReady"`
 }
 
-func NewRouter() http.Handler {
+func NewRouter(options ...Options) http.Handler {
+	o := Options{}
+	if len(options) > 0 {
+		o = options[0]
+	}
+	a := newAPI(o)
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(func(next http.Handler) http.Handler {
@@ -32,7 +41,15 @@ func NewRouter() http.Handler {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	r.Get("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	r.Get("/readyz", func(w http.ResponseWriter, req *http.Request) {
+		if a.db != nil {
+			ctx, cancel := context.WithTimeout(req.Context(), 2*time.Second)
+			defer cancel()
+			if err := a.db.Ping(ctx); err != nil {
+				failure(w, 503, "banco indisponível")
+				return
+			}
+		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ready\n"))
 	})
@@ -42,6 +59,23 @@ func NewRouter() http.Handler {
 			_ = json.NewEncoder(w).Encode(systemInfo{
 				Name: "YuFlix", Slogan: "I Watch What I Want.",
 				APIVersion: "v1", Phase: "foundation", PlaybackReady: false,
+				DatabaseReady: a.db != nil, AuthenticationReady: a.db != nil && a.publicOrigin != "",
+			})
+		})
+		r.Group(func(r chi.Router) {
+			r.Use(a.requireSecure)
+			r.Post("/auth/login", a.login)
+			r.Group(func(r chi.Router) {
+				r.Use(a.withUser)
+				r.Get("/auth/me", a.me)
+				r.Post("/auth/logout", a.logout)
+				r.Route("/admin", func(r chi.Router) {
+					r.Use(a.adminOnly)
+					r.Get("/users", a.listUsers)
+					r.Post("/users", a.createUser)
+					r.Get("/settings", a.getSettings)
+					r.Put("/settings/{key}", a.putSetting)
+				})
 			})
 		})
 	})

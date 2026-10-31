@@ -4,14 +4,14 @@
 
 YuFlix is an independent, self-hosted streaming platform for movies, series, anime, and IPTV. Built for shared sources with independent accounts, Portuguese (Brazil) first, and a media engine that prefers Direct Play over unnecessary transcoding.
 
-> **Early foundation.** This repository currently provides a versioned HTTP API, a web shell, and a tested playback decision model. It does not yet stream or transcode media. Do not use it as a Jellyfin replacement.
+> **Early foundation.** This repository currently provides a versioned HTTP API, a web shell, PostgreSQL-backed account foundations, and a tested playback decision model. It does not yet stream or transcode media. Do not use it as a Jellyfin replacement.
 
 ## Technology
 
 - Go 1.27.3, net/http, chi
 - React, TypeScript, Vite
 - YuTheme design system
-- PostgreSQL 17 (planned persistence, no database migrations or connections yet)
+- PostgreSQL 17 with pgx: migration, account and session code is prepared; sqlc generation is planned
 - FFprobe and FFmpeg (planned media worker, no active transcoding yet)
 - Docker Compose or native Go binary
 
@@ -40,7 +40,9 @@ Production build:
 
     docker compose up -d --build
 
-The web interface binds only to 127.0.0.1:62471 by default. Publish through your own trusted HTTPS reverse proxy after authorization and deployment review. No external secrets or database credentials are needed for the initial foundation.
+The web interface binds to 0.0.0.0:62471 by default. Firewall and DNS remain under installation control. The account API is disabled until a private PostgreSQL database and a valid public HTTPS origin are configured. Login over HTTP is forbidden.
+
+For database credentials, first-admin creation and HTTPS instructions see [docs/database.md](docs/database.md). Never commit secrets.
 
 Check:
 
@@ -61,6 +63,7 @@ Check:
 - [Architecture and milestone boundaries](docs/architecture.md)
 - [Playback acceptance criteria](docs/playback.md)
 - [OpenAPI v1 contract](api/openapi.yaml)
+- [PostgreSQL and secure HTTPS activation](docs/database.md)
 
 This repository intentionally contains no infrastructure-specific hostnames, IPs, credentials, or environment dumps.
 
