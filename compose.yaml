@@ -1,6 +1,8 @@
 name: yuflix
 services:
   core:
+    environment:
+      YUFLIX_TRUST_PROXY_HEADERS: "true"
     env_file:
       - path: ./.env.production
         required: false

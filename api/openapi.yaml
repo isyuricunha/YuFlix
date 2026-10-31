@@ -19,7 +19,10 @@ paths:
   /auth/login:
     post:
       summary: Log in with an individual username and password
-      description: Requires configured database and HTTPS public origin
+      description: >
+        Requires a migrated database and an explicitly allowed request origin.
+        HTTPS is recommended. HTTP login is available only with explicit
+        administrator opt-in and an allowlisted HTTP origin; traffic is not encrypted.
       requestBody:
         required: true
         content:
@@ -33,7 +36,7 @@ paths:
       responses:
         '200': {description: Secure cookie session established}
         '401': {description: Invalid credentials}
-        '403': {description: HTTPS and matching Origin required}
+        '403': {description: Protocol or request origin not authorized}
         '429': {description: Rate limited}
         '503': {description: Database not activated}
   /auth/me:

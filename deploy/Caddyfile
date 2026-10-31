@@ -8,7 +8,10 @@
     }
     @api path /api/*
     handle @api {
-        reverse_proxy core:62470
+        reverse_proxy core:62470 {
+            header_up X-Forwarded-Proto {scheme}
+            header_up X-Forwarded-Host {host}
+        }
     }
     handle /healthz {
         respond "ok" 200

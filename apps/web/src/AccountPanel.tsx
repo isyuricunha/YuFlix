@@ -18,7 +18,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export default function AccountPanel({ enabled, databaseReady }: { enabled: boolean; databaseReady: boolean }) {
   const secure = typeof location !== 'undefined' && location.protocol === 'https:'
-  const canLogin = enabled && secure
+  const canLogin = enabled
   const [user, setUser] = useState<User | null>(null)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -100,10 +100,11 @@ export default function AccountPanel({ enabled, databaseReady }: { enabled: bool
     </div>
     {!canLogin ? <div className="accounts-placeholder">
       <span className="eyebrow">02.1 / CONFIGURAÇÃO</span>
-      <div><h3>{!databaseReady ? 'Aguardando PostgreSQL 17' : 'Aguardando HTTPS'}</h3>
-        <p>A página pública está disponível. Contas, sessões e dados privados somente serão ativados após banco e HTTPS seguros.</p>
-        <small>Não informe senhas através de HTTP.</small></div>
+      <div><h3>{!databaseReady ? 'Aguardando PostgreSQL 17' : 'Acesso ainda não configurado'}</h3>
+        <p>A página pública está disponível. Para ativar contas, configure o banco e uma origem autorizada. HTTP e HTTPS são suportados.</p>
+        <small>Em HTTP, o administrador precisa habilitar explicitamente o login e autorizar o endereço local.</small></div>
     </div> : !user ? <form className="accounts-form" onSubmit={login}>
+      {!secure && <p className="transport-warning" role="note">Conexão HTTP sem criptografia. Use somente em uma rede confiável: senhas e sessões podem ser interceptadas. HTTPS é recomendado para acesso remoto.</p>}
       <p>Acesso individual por usuário e senha. Fontes compartilhadas, histórico privado.</p>
       <label>Usuário<input autoComplete="username" required minLength={3} maxLength={32} value={username} onChange={e=>setUsername(e.target.value)} /></label>
       <label>Senha<input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} /></label>

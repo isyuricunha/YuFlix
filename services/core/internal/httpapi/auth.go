@@ -27,7 +27,7 @@ func (a *api) withUser(next http.Handler) http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		u, err := a.db.UserBySession(ctx, digest)
+		u, err := a.db.UserBySession(ctx, digest, transportFromContext(r))
 		if errors.Is(err, pgx.ErrNoRows) {
 			failure(w, 401, "sessão inválida")
 			return
@@ -99,12 +99,12 @@ func (a *api) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	digest := sha256.Sum256(raw)
-	if err := a.db.CreateSession(ctx, u.ID, digest[:], time.Now().Add(sessionDuration)); err != nil {
+	if err := a.db.CreateSession(ctx, u.ID, digest[:], time.Now().Add(sessionDuration), transportFromContext(r)); err != nil {
 		failure(w, 503, "banco indisponível")
 		return
 	}
 	a.limit.reset(key)
-	setSessionCookie(w, token)
+	setSessionCookie(w, token, transportFromContext(r))
 	writeJSON(w, 200, map[string]any{"user": u})
 }
 func (a *api) me(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +120,7 @@ func (a *api) logout(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	clearSessionCookie(w)
+	clearSessionCookie(w, transportFromContext(r))
 	w.WriteHeader(204)
 }
 func (a *api) listUsers(w http.ResponseWriter, r *http.Request) {

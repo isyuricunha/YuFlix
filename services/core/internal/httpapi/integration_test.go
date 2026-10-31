@@ -48,7 +48,7 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if _, err := store.CreateFirstAdmin(ctx, "another", hash); err == nil {
 		t.Fatal("bootstrap allowed twice")
 	}
-	a := NewRouter(Options{Database: store, PublicOrigin: "https://stream.example.com"})
+	a := NewRouter(Options{Database: store, PublicOrigin: "https://stream.example.com", TrustProxy: true})
 	call := func(method, path, body, cookie, origin string) *httptest.ResponseRecorder {
 		req := httptest.NewRequest(method, path, strings.NewReader(body))
 		req.Host = "stream.example.com"
@@ -119,6 +119,75 @@ func TestIntegrationPostgres17(t *testing.T) {
 	}
 	if resp = call("GET", "/api/v1/auth/me", "", adminCookie, ""); resp.Code != 401 {
 		t.Fatalf("revocation failed %d", resp.Code)
+	}
+	// Run HTTP and HTTPS against the same database to prove transport separation.
+	dual := NewRouter(Options{
+		Database: store, PublicOrigin: "https://stream.example.com",
+		AllowedOrigins:    []string{"http://stream.example.com:62471"},
+		AllowInsecureHTTP: true, TrustProxy: true,
+	})
+	callHTTP := func(method, path, body, cookie, origin string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, "http://stream.example.com:62471"+path, strings.NewReader(body))
+		req.Host = "stream.example.com:62471"
+		req.Header.Set("X-Forwarded-Proto", "http")
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		if body != "" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		if cookie != "" {
+			req.Header.Set("Cookie", cookie)
+		}
+		rec := httptest.NewRecorder()
+		dual.ServeHTTP(rec, req)
+		return rec
+	}
+	httpOrigin := "http://stream.example.com:62471"
+	httpLogin := callHTTP("POST", "/api/v1/auth/login", loginJSON, "", httpOrigin)
+	if httpLogin.Code != 200 {
+		t.Fatalf("HTTP login status %d: %s", httpLogin.Code, httpLogin.Body.String())
+	}
+	httpCookies := httpLogin.Result().Cookies()
+	if len(httpCookies) != 1 || httpCookies[0].Name != httpCookieName || httpCookies[0].Secure || !httpCookies[0].HttpOnly {
+		t.Fatalf("HTTP cookie attributes invalid %+v", httpCookies)
+	}
+	httpCookie := httpCookies[0].Name + "=" + httpCookies[0].Value
+	if v := callHTTP("GET", "/api/v1/auth/me", "", httpCookie, ""); v.Code != 200 {
+		t.Fatalf("HTTP session failed %d", v.Code)
+	}
+	if v := callHTTP("GET", "/api/v1/auth/me", "", memberCookie.Name+"="+memberCookie.Value, ""); v.Code != 401 {
+		t.Fatalf("HTTPS cookie accepted over HTTP %d", v.Code)
+	}
+	if v := callHTTP("POST", "/api/v1/auth/logout", "", httpCookie, "https://stream.example.com"); v.Code != 403 {
+		t.Fatalf("cross-protocol Origin accepted %d", v.Code)
+	}
+	if v := callHTTP("POST", "/api/v1/auth/logout", "", httpCookie, httpOrigin); v.Code != 204 {
+		t.Fatalf("HTTP logout %d", v.Code)
+	}
+	if v := callHTTP("GET", "/api/v1/auth/me", "", httpCookie, ""); v.Code != 401 {
+		t.Fatalf("HTTP session not revoked %d", v.Code)
+	}
+	req := httptest.NewRequest("GET", "/api/v1/auth/me", nil)
+	req.Host = "stream.example.com"
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("Cookie", httpCookie)
+	rec := httptest.NewRecorder()
+	dual.ServeHTTP(rec, req)
+	if rec.Code != 401 {
+		t.Fatalf("HTTP cookie accepted under HTTPS: %d", rec.Code)
+	}
+
+	deniedHTTP := NewRouter(Options{Database: store, AllowedOrigins: []string{httpOrigin}, TrustProxy: true})
+	request := httptest.NewRequest("POST", "/api/v1/auth/login", strings.NewReader(loginJSON))
+	request.Host = "stream.example.com:62471"
+	request.Header.Set("X-Forwarded-Proto", "http")
+	request.Header.Set("Origin", httpOrigin)
+	request.Header.Set("Content-Type", "application/json")
+	denied := httptest.NewRecorder()
+	deniedHTTP.ServeHTTP(denied, request)
+	if denied.Code != 403 {
+		t.Fatalf("HTTP accidentally enabled by default: %d", denied.Code)
 	}
 	sha := sha256.Sum256([]byte(admin.ID))
 	if len(base64.RawURLEncoding.EncodeToString(sha[:])) == 0 {

@@ -54,16 +54,16 @@ func NewRouter(options ...Options) http.Handler {
 		_, _ = w.Write([]byte("ready\n"))
 	})
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/system/info", func(w http.ResponseWriter, _ *http.Request) {
+		r.Get("/system/info", func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			_ = json.NewEncoder(w).Encode(systemInfo{
 				Name: "YuFlix", Slogan: "I Watch What I Want.",
 				APIVersion: "v1", Phase: "foundation", PlaybackReady: false,
-				DatabaseReady: a.db != nil, AuthenticationReady: a.db != nil && a.publicOrigin != "",
+				DatabaseReady: a.db != nil, AuthenticationReady: a.authenticationReady(req),
 			})
 		})
 		r.Group(func(r chi.Router) {
-			r.Use(a.requireSecure)
+			r.Use(a.requireTransport)
 			r.Post("/auth/login", a.login)
 			r.Group(func(r chi.Router) {
 				r.Use(a.withUser)

@@ -54,6 +54,9 @@ func main() {
 		defer store.Close()
 	}
 	origin := os.Getenv("YUFLIX_PUBLIC_ORIGIN")
+	allowedOrigins := strings.Split(os.Getenv("YUFLIX_ALLOWED_ORIGINS"), ",")
+	allowHTTP := os.Getenv("YUFLIX_ALLOW_INSECURE_HTTP") == "true"
+	trustProxy := os.Getenv("YUFLIX_TRUST_PROXY_HEADERS") == "true"
 	addr := os.Getenv("YUFLIX_HTTP_ADDR")
 	if addr == "" {
 		addr = "127.0.0.1:62470"
@@ -61,7 +64,7 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           httpapi.NewRouter(httpapi.Options{Database: store, PublicOrigin: origin}),
+		Handler:           httpapi.NewRouter(httpapi.Options{Database: store, PublicOrigin: origin, AllowedOrigins: allowedOrigins, AllowInsecureHTTP: allowHTTP, TrustProxy: trustProxy}),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		IdleTimeout:       90 * time.Second,

@@ -124,7 +124,7 @@ func (d *DB) Migrate(ctx context.Context) error {
 
 func (d *DB) SchemaReady(ctx context.Context) bool {
 	var v int
-	return d.pool.QueryRow(ctx, "SELECT max(version) FROM schema_migrations").Scan(&v) == nil && v >= 1
+	return d.pool.QueryRow(ctx, "SELECT max(version) FROM schema_migrations").Scan(&v) == nil && v >= 2
 }
 
 func scanUser(row pgx.Row) (User, error) {
@@ -158,13 +158,13 @@ func (d *DB) ListUsers(ctx context.Context) ([]User, error) {
 	}
 	return result, rows.Err()
 }
-func (d *DB) UserBySession(ctx context.Context, hash []byte) (User, error) {
+func (d *DB) UserBySession(ctx context.Context, hash []byte, transport string) (User, error) {
 	return scanUser(d.pool.QueryRow(ctx, `SELECT u.id::text,u.username,u.role,u.enabled,u.created_at
 		FROM sessions s JOIN users u ON s.user_id=u.id
-		WHERE s.token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at > now() AND u.enabled`, hash))
+		WHERE s.token_hash=$1 AND s.transport=$2 AND s.revoked_at IS NULL AND s.expires_at > now() AND u.enabled`, hash, transport))
 }
-func (d *DB) CreateSession(ctx context.Context, userID string, hash []byte, expires time.Time) error {
-	_, err := d.pool.Exec(ctx, `INSERT INTO sessions (token_hash,user_id,expires_at) VALUES ($1,$2::uuid,$3)`, hash, userID, expires)
+func (d *DB) CreateSession(ctx context.Context, userID string, hash []byte, expires time.Time, transport string) error {
+	_, err := d.pool.Exec(ctx, `INSERT INTO sessions (token_hash,user_id,expires_at,transport) VALUES ($1,$2::uuid,$3,$4)`, hash, userID, expires, transport)
 	return err
 }
 func (d *DB) RevokeSession(ctx context.Context, hash []byte) error {

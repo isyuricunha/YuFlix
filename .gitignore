@@ -23,3 +23,9 @@ tmp/
 .idea/
 # Local-only deployment
 compose.override.yaml
+
+# Editor temporary/swap files; may contain private .env copies
+*.swp
+*.swo
+*.swn
+*~

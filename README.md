@@ -40,9 +40,9 @@ Production build:
 
     docker compose up -d --build
 
-The web interface binds to 0.0.0.0:62471 by default. Firewall and DNS remain under installation control. The account API is disabled until a private PostgreSQL database and a valid public HTTPS origin are configured. Login over HTTP is forbidden.
+The web interface binds to 0.0.0.0:62471 by default. Firewall and DNS remain under installation control. The account API is disabled until PostgreSQL and an approved origin are configured. HTTPS is recommended; explicit opt-in HTTP is supported for trusted local installations. HTTP sends passwords and cookies in cleartext.
 
-For database credentials, first-admin creation and HTTPS instructions see [docs/database.md](docs/database.md). Never commit secrets.
+For database credentials, first-admin creation and HTTP/HTTPS configuration see [docs/database.md](docs/database.md). Never commit secrets.
 
 Check:
 

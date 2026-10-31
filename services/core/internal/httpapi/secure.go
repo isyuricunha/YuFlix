@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -16,19 +17,62 @@ import (
 )
 
 const cookieName = "__Host-yuflix_session"
+const httpCookieName = "yuflix_http_session"
 const sessionDuration = 12 * time.Hour
 
 type Options struct {
-	Database     *db.DB
-	PublicOrigin string
+	Database          *db.DB
+	PublicOrigin      string // Legacy single HTTPS origin.
+	AllowedOrigins    []string
+	AllowInsecureHTTP bool
+	TrustProxy        bool // Only when Core is isolated behind a reverse proxy that overwrites X-Forwarded-Proto.
 }
 type api struct {
 	db            *db.DB
-	publicOrigin  string
-	publicHost    string
+	origins       map[string]struct{}
+	trustProxy    bool
 	limit         *loginLimiter
 	passwordSlots chan struct{}
 }
+type transportKey struct{}
+
+func transportFromContext(r *http.Request) string {
+	v, _ := r.Context().Value(transportKey{}).(string)
+	return v
+}
+func (a *api) requestTransport(r *http.Request) string {
+	if r.TLS != nil {
+		return "https"
+	}
+	if !a.trustProxy {
+		return "http"
+	}
+	// An isolated trusted reverse proxy must overwrite this header.
+	switch r.Header.Get("X-Forwarded-Proto") {
+	case "https":
+		return "https"
+	case "http":
+		return "http"
+	default:
+		return ""
+	}
+}
+func validOrigin(input string, allowHTTP bool) (string, bool) {
+	if input == "" || strings.TrimSpace(input) != input {
+		return "", false
+	}
+	u, err := url.Parse(input)
+	if err != nil || u.Opaque != "" || u.Host == "" || u.Hostname() == "" || u.User != nil ||
+		u.Path != "" || u.RawPath != "" || u.RawQuery != "" || u.Fragment != "" || u.ForceQuery ||
+		(u.Scheme != "https" && !(allowHTTP && u.Scheme == "http")) {
+		return "", false
+	}
+	if u.String() != input {
+		return "", false
+	}
+	return input, true
+}
+
 type loginEntry struct {
 	count int
 	start time.Time
@@ -60,19 +104,32 @@ func (l *loginLimiter) allow(key string) bool {
 	l.items[key] = e
 	return e.count <= 8
 }
-func (l *loginLimiter) reset(key string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	delete(l.items, key)
-}
+func (l *loginLimiter) reset(key string) { l.mu.Lock(); defer l.mu.Unlock(); delete(l.items, key) }
 func newAPI(o Options) *api {
-	a := &api{db: o.Database, limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2)}
-	v, err := url.Parse(o.PublicOrigin)
-	if err == nil && v.Scheme == "https" && v.Host != "" && v.User == nil && v.Path == "" && v.RawQuery == "" && v.Fragment == "" {
-		a.publicOrigin = strings.TrimSuffix(v.String(), "/")
-		a.publicHost = v.Host
+	a := &api{db: o.Database, origins: map[string]struct{}{}, trustProxy: o.TrustProxy,
+		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2)}
+	for _, origin := range append([]string{o.PublicOrigin}, o.AllowedOrigins...) {
+		if v, ok := validOrigin(origin, o.AllowInsecureHTTP); ok {
+			a.origins[v] = struct{}{}
+		}
 	}
 	return a
+}
+func (a *api) allowedRequest(r *http.Request) (string, string, bool) {
+	scheme := a.requestTransport(r)
+	if scheme == "" {
+		return "", "", false
+	}
+	origin := scheme + "://" + r.Host
+	_, ok := a.origins[origin]
+	return scheme, origin, ok
+}
+func (a *api) authenticationReady(r *http.Request) bool {
+	if a.db == nil {
+		return false
+	}
+	_, _, ok := a.allowedRequest(r)
+	return ok
 }
 func writeJSON(w http.ResponseWriter, code int, value any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -91,30 +148,25 @@ func decodeJSON(r *http.Request, dst any) error {
 	if err := dec.Decode(dst); err != nil {
 		return err
 	}
-	var extra any
-	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
+	var more any
+	if err := dec.Decode(&more); !errors.Is(err, io.EOF) {
 		return errors.New("unexpected trailing content")
 	}
 	return nil
 }
-func (a *api) requireSecure(next http.Handler) http.Handler {
+func (a *api) requireTransport(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if a.db == nil || a.publicOrigin == "" {
-			failure(w, http.StatusServiceUnavailable, "autenticação aguardando configuração segura")
+		if a.db == nil {
+			failure(w, http.StatusServiceUnavailable, "autenticação aguardando PostgreSQL")
 			return
 		}
-		// The reverse proxy is responsible for replacing client-supplied forwarded headers.
-		// No direct network route may expose the Core outside its Docker network.
-		if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-			failure(w, http.StatusForbidden, "HTTPS obrigatório")
-			return
-		}
-		if !strings.EqualFold(r.Host, a.publicHost) {
-			failure(w, http.StatusForbidden, "origem inválida")
+		scheme, origin, ok := a.allowedRequest(r)
+		if !ok {
+			failure(w, http.StatusForbidden, "origem ou protocolo não autorizado")
 			return
 		}
 		if r.Method != "GET" && r.Method != "HEAD" && r.Method != "OPTIONS" {
-			if r.Header.Get("Origin") != a.publicOrigin {
+			if r.Header.Get("Origin") != origin {
 				failure(w, http.StatusForbidden, "origem inválida")
 				return
 			}
@@ -125,29 +177,48 @@ func (a *api) requireSecure(next http.Handler) http.Handler {
 				return
 			}
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), transportKey{}, scheme)))
 	})
 }
+func sessionCookieName(scheme string) string {
+	switch scheme {
+	case "https":
+		return cookieName
+	case "http":
+		return httpCookieName
+	default:
+		return ""
+	}
+}
 func cookieDigest(r *http.Request) ([]byte, error) {
-	c, err := r.Cookie(cookieName)
+	name := sessionCookieName(transportFromContext(r))
+	if name == "" {
+		return nil, errors.New("unknown session transport")
+	}
+	cookie, err := r.Cookie(name)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := base64.RawURLEncoding.DecodeString(c.Value)
+	raw, err := base64.RawURLEncoding.DecodeString(cookie.Value)
 	if err != nil || len(raw) != 32 {
 		return nil, errors.New("invalid session")
 	}
 	h := sha256.Sum256(raw)
 	return h[:], nil
 }
-func clearSessionCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
-		Name: cookieName, Value: "", Path: "/", MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode,
-	})
+func clearSessionCookie(w http.ResponseWriter, scheme string) {
+	name := sessionCookieName(scheme)
+	if name == "" {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: "/", MaxAge: -1,
+		Secure: scheme == "https", HttpOnly: true, SameSite: http.SameSiteStrictMode})
 }
-func setSessionCookie(w http.ResponseWriter, token string) {
-	http.SetCookie(w, &http.Cookie{
-		Name: cookieName, Value: token, Path: "/", MaxAge: int(sessionDuration.Seconds()),
-		Secure: true, HttpOnly: true, SameSite: http.SameSiteStrictMode,
-	})
+func setSessionCookie(w http.ResponseWriter, token, scheme string) {
+	name := sessionCookieName(scheme)
+	if name == "" {
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: name, Value: token, Path: "/", MaxAge: int(sessionDuration.Seconds()),
+		Secure: scheme == "https", HttpOnly: true, SameSite: http.SameSiteStrictMode})
 }

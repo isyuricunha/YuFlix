@@ -6,7 +6,7 @@
 - Web: single-origin React application; the web gateway forwards /api to Core.
 - Media planning: pure Go decision logic to decide Direct Play, remux or selective transcode. It does not probe, download or play media.
 - Persistence: PostgreSQL 17 schema and pgx pool support users, sessions, settings, and future progress. No production database is connected yet; sqlc generation is pending.
-- Authentication uses Argon2id, revocable sessions and admin RBAC. Endpoints fail closed until DB migrations and HTTPS are configured. Actual media routes do not exist.
+- Authentication uses Argon2id, revocable sessions and admin RBAC. Endpoints fail closed until DB migrations and an approved HTTP/HTTPS origin are configured. Actual media routes do not exist.
 - YuTheme is imported as an external dependency; do not duplicate or override its palette.
 
 ## Target data flow
@@ -34,3 +34,9 @@ Two containers in the foundation: Core and Web. The web gateway binds to a high 
 7. IPTV, guides, and richer media discovery.
 
 No milestone is complete until its specific tests pass.
+
+## Network transport model
+
+YuFlix supports HTTPS and explicitly opted-in HTTP access. Approved origins are exact, installation-specific strings, and the Core never derives trust from an arbitrary request Host. Sessions are bound to the HTTP or HTTPS transport and use separate cookies. HTTPS retains secure __Host-prefixed cookies. HTTP lacks confidentiality and must be limited to trusted networks.
+
+The bundled Core trusts X-Forwarded-Proto only from its private Caddy gateway, which overwrites the header. Native Core deployments default to interpreting direct requests as HTTP unless TLS is terminated by the process. Custom reverse proxy configurations require a validated trusted proxy boundary.
