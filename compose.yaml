@@ -1,0 +1,51 @@
+name: yuflix
+services:
+  core:
+    build:
+      context: ./services/core
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/yuflix", "healthcheck"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks: [internal]
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid,uid=10001,gid=10001,mode=0700
+      - /config:size=32m,noexec,nosuid,uid=10001,gid=10001,mode=0700
+      - /data:size=32m,noexec,nosuid,uid=10001,gid=10001,mode=0700
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    ports:
+      - "127.0.0.1:62471:62471"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:62471/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      core:
+        condition: service_healthy
+    networks: [internal]
+networks:
+  internal:
+    driver: bridge

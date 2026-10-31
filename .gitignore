@@ -1,0 +1,25 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.secret
+*credentials*
+*secrets*
+# Build outputs
+node_modules/
+dist/
+coverage/
+*.test
+*.out
+bin/
+tmp/
+.cache/
+.DS_Store
+.vscode/
+.idea/
+# Local-only deployment
+compose.override.yaml

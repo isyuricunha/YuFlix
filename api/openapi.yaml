@@ -1,0 +1,40 @@
+openapi: 3.1.0
+info:
+  title: YuFlix API
+  version: 0.1.0
+  description: Foundation API. Playback, authentication and private endpoints are not available yet.
+servers:
+  - url: /api/v1
+paths:
+  /system/info:
+    get:
+      summary: Public, non-sensitive instance metadata
+      operationId: getSystemInfo
+      responses:
+        "200":
+          description: Public instance metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemInfo"
+components:
+  schemas:
+    SystemInfo:
+      type: object
+      additionalProperties: false
+      required: [name, slogan, apiVersion, phase, playbackReady]
+      properties:
+        name:
+          type: string
+          const: YuFlix
+        slogan:
+          type: string
+        apiVersion:
+          type: string
+          const: v1
+        phase:
+          type: string
+          const: foundation
+        playbackReady:
+          type: boolean
+          const: false

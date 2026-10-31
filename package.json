@@ -1,0 +1,11 @@
+{
+  "name": "yuflix",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@12.3.4",
+  "scripts": {
+    "dev": "pnpm --filter @yuflix/web dev",
+    "build": "pnpm --filter @yuflix/web build",
+    "typecheck": "pnpm --filter @yuflix/web typecheck"
+  }
+}
