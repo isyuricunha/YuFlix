@@ -209,7 +209,7 @@ func (a *api) catalogMeta(w http.ResponseWriter, r *http.Request) {
 		failure(w, 404, "metadados indisponíveis")
 		return
 	}
-	info, err := a.catalogClient.Meta(ctx, src.ManifestURL, typ, metaID)
+	info, err := resolveCatalogMetadata(ctx, src.ManifestURL, typ, metaID, a.catalogClient.Meta)
 	if err != nil {
 		failure(w, 502, "metadados temporariamente indisponíveis")
 		return

@@ -33,6 +33,7 @@ collection endpoint directly.
   results, snapshots newer than 48 hours); absence from search does not mean
   that an upstream provider lacks a title.
 - Actual stream availability is checked only when Play is requested.
+- Catalog-only providers, including Streaming Catalogs, can borrow compatible IMDb-identified title details from Cinemeta. This is metadata only and keeps playback source discovery independent. Unknown provider IDs are not guessed or remapped.
 
 ## Privacy and safety
 
