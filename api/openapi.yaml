@@ -124,6 +124,35 @@ paths:
         - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
         '204': {description: Stream addon removed}
+  /admin/network/egress:
+    get:
+      summary: Show which stream addons have an authorized private egress (admin)
+      description: Never returns egress addresses, secrets or private provider manifest URLs.
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Map of addon IDs to egress availability}
+        '403': {description: Administrator access required}
+  /admin/media/addons/{sourceID}/route:
+    put:
+      summary: Select Direct, private egress, or Automatic networking for one stream addon (admin)
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [route]
+              properties:
+                route: {type: string, enum: [direct, egress, auto]}
+      responses:
+        '200': {description: Route saved in PostgreSQL; previous tickets revoked}
+        '400': {description: Invalid mode or input}
+        '403': {description: Administrator access required}
+        '404': {description: Stream addon not found}
+        '409': {description: No authorized egress for this addon}
   /auth/login:
     post:
       summary: Log in with an individual username and password

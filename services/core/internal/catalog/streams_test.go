@@ -179,3 +179,24 @@ func TestPublicMediaRedirectsWithoutInternalNetworks(t *testing.T) {
 		}
 	}
 }
+
+func TestPerSourceRoutingDefaultsToDirectWithoutEgress(t *testing.T) {
+	client := &Client{client: &http.Client{Transport: fakeRoundTrip(func(req *http.Request) (*http.Response, error) {
+		if req.URL.Hostname() != "addon.example.com" {
+			t.Fatal("unexpected upstream")
+		}
+		return fakeJSON(`{"streams":[{"name":"Direct MP4","url":"https://video.example.com/clip.mp4"}]}`), nil
+	})}}
+	for _, route := range []string{"direct", "auto"} {
+		report, remote, err := client.RouteStreams(context.Background(), "https://addon.example.com/manifest.json", "movie", "tt123", route)
+		if err != nil || remote || len(report.Streams) != 1 {
+			t.Fatalf("invalid %s routing: %v remote=%t result=%d", route, err, remote, len(report.Streams))
+		}
+	}
+	if _, _, err := client.RouteStreams(context.Background(), "https://addon.example.com/manifest.json", "movie", "tt123", "egress"); !errors.Is(err, ErrEgressUnavailable) {
+		t.Fatal("egress accepted without authorized private configuration")
+	}
+	if _, _, err := client.RouteStreams(context.Background(), "https://addon.example.com/manifest.json", "movie", "tt123", "untrusted"); !errors.Is(err, ErrInvalid) {
+		t.Fatal("unsupported routing mode accepted")
+	}
+}

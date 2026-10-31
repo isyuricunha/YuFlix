@@ -17,6 +17,8 @@ import (
 
 const egressPort = "62582"
 
+var ErrEgressUnavailable = errors.New("private egress not configured for this provider")
+
 // EgressTransport is an explicitly configured, authenticated Tailscale-only
 // public-addon lookup route. It never proxies arbitrary URLs or media bytes.
 type EgressTransport struct {

@@ -106,3 +106,34 @@ Operators should prefer HTTPS media providers where available. This is distinct
 from encrypted Tailscale communication between YuFlix Core and an optional
 egress host. Browser requests still use the installation's configured
 HTTP/HTTPS origin.
+
+## Default-direct routing and optional egress per addon
+
+The normal installation places **Core and Web together on one host** and
+connects to PostgreSQL 17 over the operator's own trusted network. It does
+not require Tailscale, egress services or any other YuFlix installation.
+
+Administrators can select the network route independently for each stream
+addon under **Administration > Reprodução**:
+
+- **Direto** (default): the YuFlix Core contacts the addon and media server
+  itself, using DNS pinning, SSRF protection and bounded media streaming.
+- **Egress privado**: source discovery, verification and media streaming use
+  an operator-authorized private relay.
+- **Automático**: try the direct discovery first; on a connection/provider
+  failure, use an authorized egress. Normal media validation still applies.
+
+The Egress and Automatic choices are shown only for addons whose host is
+explicitly allowlisted in a configured egress. The network route is saved
+in source_configs JSONB in PostgreSQL, and old records default to Direct.
+Changing a route invalidates existing media tickets for that addon.
+
+A relay's private endpoint, bearer secret and allowed hostnames are initial
+bootstrap secrets in the Core environment. They are never returned by
+public or authenticated APIs. A new installation without these bootstrap
+settings uses Direct routing only. The relay service itself is optional
+and deployed independently (see deploy/egress.compose.yaml).
+
+Adding and rotating arbitrary relay credentials entirely through the panel
+is future work. No private hostname, IP or credential is embedded in the
+repository, container images or frontend.

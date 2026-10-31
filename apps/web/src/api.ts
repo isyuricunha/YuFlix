@@ -62,7 +62,7 @@ export type CatalogDetail = CatalogItem & {
   videos?: { id: string; title: string; season: number; episode: number }[]
 }
 
-export type StreamAddon = { id: string; name: string; enabled: boolean }
+export type StreamAddon = { id: string; name: string; enabled: boolean; networkRoute: 'direct' | 'egress' | 'auto' }
 export type MediaCandidate = {
   sourceId: string
   sourceName: string

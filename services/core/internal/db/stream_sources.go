@@ -8,10 +8,11 @@ import (
 )
 
 type StreamAddon struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Enabled     bool   `json:"enabled"`
-	ManifestURL string `json:"-"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Enabled      bool   `json:"enabled"`
+	ManifestURL  string `json:"-"`
+	NetworkRoute string `json:"networkRoute"`
 }
 
 func readStreamAddon(row pgx.Row) (StreamAddon, error) {
@@ -22,16 +23,18 @@ func readStreamAddon(row pgx.Row) (StreamAddon, error) {
 		return s, err
 	}
 	var config struct {
-		ManifestURL string `json:"manifestUrl"`
+		ManifestURL  string `json:"manifestUrl"`
+		NetworkRoute string `json:"networkRoute"`
 	}
 	if err = json.Unmarshal(value, &config); err != nil || config.ManifestURL == "" {
 		return s, errors.New("invalid stream addon configuration")
 	}
 	s.ManifestURL = config.ManifestURL
+	s.NetworkRoute = normalizedStreamRoute(config.NetworkRoute)
 	return s, nil
 }
 func (d *DB) AddStreamAddon(ctx context.Context, name, manifestURL string) (StreamAddon, error) {
-	raw, err := json.Marshal(map[string]string{"manifestUrl": manifestURL})
+	raw, err := json.Marshal(map[string]string{"manifestUrl": manifestURL, "networkRoute": "direct"})
 	if err != nil {
 		return StreamAddon{}, err
 	}
@@ -55,12 +58,14 @@ func (d *DB) ListStreamAddons(ctx context.Context) ([]StreamAddon, error) {
 			return nil, err
 		}
 		var v struct {
-			ManifestURL string `json:"manifestUrl"`
+			ManifestURL  string `json:"manifestUrl"`
+			NetworkRoute string `json:"networkRoute"`
 		}
 		if err = json.Unmarshal(data, &v); err != nil || v.ManifestURL == "" {
 			return nil, errors.New("invalid stream addon config")
 		}
 		s.ManifestURL = v.ManifestURL
+		s.NetworkRoute = normalizedStreamRoute(v.NetworkRoute)
 		out = append(out, s)
 	}
 	return out, rows.Err()
@@ -75,4 +80,23 @@ func (d *DB) DeleteStreamAddon(ctx context.Context, id string) (bool, error) {
 		return false, err
 	}
 	return result.RowsAffected() != 0, nil
+}
+
+// Existing records without networkRoute use safe direct egress.
+func normalizedStreamRoute(route string) string {
+	switch route {
+	case "direct", "egress", "auto":
+		return route
+	default:
+		return "direct"
+	}
+}
+func (d *DB) UpdateStreamAddonRoute(ctx context.Context, id, route string) (StreamAddon, error) {
+	if route != "direct" && route != "egress" && route != "auto" {
+		return StreamAddon{}, errors.New("invalid route")
+	}
+	return readStreamAddon(d.pool.QueryRow(ctx,
+		`UPDATE source_configs SET config=jsonb_set(config,'{networkRoute}',to_jsonb($2::text),true)
+   WHERE type='stremio_stream' AND id=$1::uuid
+   RETURNING id::text,name,enabled,config`, id, route))
 }

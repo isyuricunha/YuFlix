@@ -167,3 +167,48 @@ func (c *Client) StreamsDetailed(ctx context.Context, manifestURL, typ, videoID 
 	}
 	return StreamReport{Streams: result, Received: len(payload.Streams), Unsupported: len(payload.Streams) - len(result)}, nil
 }
+
+// RouteStreams selects an operator-configured transport per source. Direct
+// does not inherit the globally bootstrapped egress configuration.
+func (c *Client) RouteStreams(ctx context.Context, manifestURL, typ, id, route string) (StreamReport, bool, error) {
+	if c == nil {
+		return StreamReport{}, false, ErrUpstream
+	}
+	if _, err := ValidateManifestURL(manifestURL); err != nil {
+		return StreamReport{}, false, err
+	}
+	if (typ != "movie" && typ != "series") || !ValidMediaID(id) {
+		return StreamReport{}, false, ErrInvalid
+	}
+	direct := func() (StreamReport, error) {
+		client := &Client{client: c.client}
+		return client.StreamsDetailed(ctx, manifestURL, typ, id)
+	}
+	egressAvailable := c.egress != nil && c.egress.handles(manifestURL)
+	switch route {
+	case "direct", "":
+		result, err := direct()
+		return result, false, err
+	case "egress":
+		if !egressAvailable {
+			return StreamReport{}, false, ErrEgressUnavailable
+		}
+		result, err := c.egress.streams(ctx, manifestURL, typ, id)
+		return result, true, err
+	case "auto":
+		result, err := direct()
+		if err == nil || !egressAvailable {
+			return result, false, err
+		}
+		result, err = c.egress.streams(ctx, manifestURL, typ, id)
+		return result, true, err
+	default:
+		return StreamReport{}, false, ErrInvalid
+	}
+}
+
+// EgressAvailableFor only discloses whether this configured manifest can use
+// an operator-authorized private egress, never its location or credentials.
+func (c *Client) EgressAvailableFor(manifestURL string) bool {
+	return c != nil && c.egress != nil && c.egress.handles(manifestURL)
+}

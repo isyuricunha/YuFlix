@@ -86,6 +86,8 @@ func NewRouter(options ...Options) http.Handler {
 					r.Delete("/catalog/sources/{sourceID}", a.deleteCatalogSource)
 					r.Post("/media/addons", a.addStreamAddon)
 					r.Delete("/media/addons/{sourceID}", a.removeStreamAddon)
+					r.Put("/media/addons/{sourceID}/route", a.updateStreamAddonRoute)
+					r.Get("/network/egress", a.streamEgressOptions)
 				})
 			})
 		})

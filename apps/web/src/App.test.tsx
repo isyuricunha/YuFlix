@@ -36,6 +36,8 @@ function serve(options: {
   authenticationReady?: boolean
   catalog?: boolean
   providerDenied?: boolean
+  streamSettings?: boolean
+  egressAvailable?: boolean
 } = {}) {
   const fakeFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = input.toString()
@@ -79,7 +81,19 @@ function serve(options: {
       mode:'direct_play',status:'probe_passed_not_browser_verified',
       name:'MP4 seguro',sourceName:'Test Addon',
     },201)
-    if (path.endsWith('/media/addons')) return fakeResponse({sources:[]})
+    if (path.endsWith('/media/addons')) return fakeResponse({sources:options.streamSettings ? [{
+      id:'123e4567-e89b-12d3-a456-426614174000',name:'Test Provider',
+      enabled:true,networkRoute:'direct',
+    }] : []})
+    if (path.endsWith('/admin/network/egress')) return fakeResponse({
+      availableForSources:options.egressAvailable ? {'123e4567-e89b-12d3-a456-426614174000':true} : {},
+    })
+    if (path.endsWith('/route') && init?.method==='PUT') {
+      const selection=JSON.parse(String(init.body??'{}'))
+      return fakeResponse({source:{id:'123e4567-e89b-12d3-a456-426614174000',
+        name:'Test Provider',enabled:true,networkRoute:selection.route}})
+    }
+
     if (path.endsWith('/admin/users')) return fakeResponse({ users: [admin, member] })
     if (path.endsWith('/admin/settings')) return fakeResponse({ settings: {} })
     return fakeResponse({ error: 'not found' }, 404)
@@ -209,6 +223,32 @@ describe('YuFlix authentication experience', () => {
     expect(await screen.findByText(/Acesso recusado pelo provedor \(HTTP 403\)/)).toBeTruthy()
     expect(screen.queryByText('1 provedor(es) não responderam.')).toBeNull()
     expect(screen.queryByText(/manifest\.json/)).toBeNull()
+  })
+
+  it('defaults provider networking to direct without requiring egress', async () => {
+    serve({session:admin,streamSettings:true})
+    const actor=userEvent.setup()
+    route('/admin')
+    await actor.click(await screen.findByRole('button',{name:'Reprodução'}))
+    const selector=await screen.findByLabelText('Rede') as HTMLSelectElement
+    expect(selector.value).toBe('direct')
+    expect(selector.querySelectorAll('option')).toHaveLength(1)
+    expect(selector.textContent).toContain('Direto')
+  })
+
+  it('permits configured egress per addon and persists the mode through admin API', async () => {
+    const calls=serve({session:admin,streamSettings:true,egressAvailable:true})
+    const actor=userEvent.setup()
+    route('/admin')
+    await actor.click(await screen.findByRole('button',{name:'Reprodução'}))
+    const selector=await screen.findByLabelText('Rede') as HTMLSelectElement
+    expect(selector.querySelectorAll('option')).toHaveLength(3)
+    await actor.selectOptions(selector,'auto')
+    await waitFor(()=>expect(selector.value).toBe('auto'))
+    const saves=calls.mock.calls.filter(call=>String(call[0]).endsWith('/route'))
+    expect(saves).toHaveLength(1)
+    expect(JSON.parse(String(saves[0][1]?.body)).route).toBe('auto')
+    expect(saves[0][1]?.credentials).toBe('same-origin')
   })
 
 })

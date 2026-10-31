@@ -4,15 +4,19 @@ import { APIError, api, type StreamAddon } from '../api'
 export default function StreamSources() {
   const [sources, setSources] = useState<StreamAddon[]>([])
   const [manifestURL, setManifestURL] = useState('')
+  const [egressBySource, setEgressBySource] = useState<Record<string,boolean>>({})
   const [pending, setPending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   useEffect(() => {
     let active = true
-    api<{sources:StreamAddon[]}>('/media/addons').then(response => {
-      if(active)setSources(response.sources)
-    }).catch(() => {if(active)setError('Não foi possível carregar os provedores.')})
+    Promise.all([
+      api<{sources:StreamAddon[]}>('/media/addons'),
+      api<{availableForSources:Record<string,boolean>}>('/admin/network/egress'),
+    ]).then(([response,network]) => {
+      if(active){setSources(response.sources);setEgressBySource(network.availableForSources)}
+    }).catch(() => {if(active)setError('Não foi possível carregar os provedores ou suas opções de rede.')})
       .finally(()=>{if(active)setLoading(false)})
     return ()=>{active=false}
   }, [])
@@ -38,6 +42,19 @@ export default function StreamSources() {
       }
     } finally {setPending(false)}
   }
+  async function updateRoute(source:StreamAddon,route:StreamAddon['networkRoute']){
+    if(pending || route===source.networkRoute)return
+    setPending(true);setError('');setNotice('')
+    try{
+      const result=await api<{source:StreamAddon}>('/admin/media/addons/'+source.id+'/route',{
+        method:'PUT',body:JSON.stringify({route}),
+      })
+      setSources(previous=>previous.map(value=>value.id===source.id ? result.source : value))
+      setNotice('Rota de rede atualizada. Sessões anteriores desta fonte foram invalidadas.')
+    }catch{
+      setError('Não foi possível alterar a rota. Confira se há um egress autorizado para essa fonte.')
+    }finally{setPending(false)}
+  }
   async function remove(source: StreamAddon) {
     if(pending || !window.confirm('Remover o provedor '+source.name+'?'))return
     setError('');setNotice('');setPending(true)
@@ -51,11 +68,24 @@ export default function StreamSources() {
   return <section className="yf-admin__catalogs" aria-labelledby="streams-title">
     <h2 id="streams-title">Provedores de vídeo</h2>
     <p className="yf-admin__muted">Fontes compartilhadas pelos usuários. Cada pessoa mantém a própria sessão. Apenas MP4 público por HTTPS com suporte a Range pode ser reproduzido nesta etapa.</p>
+    <p className="yf-admin__muted">A saída direta é o padrão. O egress privado só aparece quando estiver autorizado para o provedor. A seleção é salva no PostgreSQL, sem expor credenciais ou endereços de infraestrutura.</p>
     {loading && <p role="status" className="yf-admin__muted">Carregando provedores...</p>}
     {!loading && <div className="yf-admin__source-list">
       {sources.map(source=><div className="yf-admin__source" key={source.id}>
-        <div><strong>{source.name}</strong><small>Addon de reprodução Stremio</small></div>
-        <button disabled={pending} type="button" onClick={()=>remove(source)}>Remover</button>
+        <div><strong>{source.name}</strong><small>Addon Stremio · Configuração compartilhada</small></div>
+        <div className="yf-admin__source-controls">
+          <label htmlFor={'egress-route-'+source.id}>
+            Rede
+            <select id={'egress-route-'+source.id}
+              value={source.networkRoute || 'direct'} disabled={pending}
+              onChange={event=>void updateRoute(source,event.target.value as StreamAddon['networkRoute'])}>
+              <option value="direct">Direto</option>
+              {egressBySource[source.id] && <option value="egress">Egress privado</option>}
+              {egressBySource[source.id] && <option value="auto">Automático</option>}
+            </select>
+          </label>
+          <button disabled={pending} type="button" onClick={()=>remove(source)}>Remover</button>
+        </div>
       </div>)}
       {!sources.length && <p className="yf-admin__muted">Nenhum provedor de vídeo cadastrado.</p>}
     </div>}

@@ -146,6 +146,32 @@ func TestIntegrationPostgres17(t *testing.T) {
 		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 403 {
 		t.Fatalf("member removed stream source: %d", resp.Code)
 	}
+	if streamAddon.NetworkRoute != "direct" {
+		t.Fatal("new addons must use direct transport")
+	}
+	memberCookieString := memberCookie.Name + "=" + memberCookie.Value
+	routePath := "/api/v1/admin/media/addons/" + streamAddon.ID + "/route"
+	if resp = call("PUT", routePath, `{"route":"auto"}`,
+		memberCookieString, "https://stream.example.com"); resp.Code != 403 {
+		t.Fatalf("member changed source network mode: %d", resp.Code)
+	}
+	if resp = call("PUT", routePath, `{"route":"invalid"}`,
+		adminCookie, "https://stream.example.com"); resp.Code != 400 {
+		t.Fatalf("invalid routing mode accepted: %d", resp.Code)
+	}
+	if resp = call("PUT", routePath, `{"route":"egress"}`,
+		adminCookie, "https://stream.example.com"); resp.Code != 409 {
+		t.Fatalf("unconfigured egress accepted: %d", resp.Code)
+	}
+	if resp = call("PUT", routePath, `{"route":"direct"}`,
+		adminCookie, "https://stream.example.com"); resp.Code != 200 ||
+		!strings.Contains(resp.Body.String(), `"networkRoute":"direct"`) {
+		t.Fatalf("direct routing could not be saved: %d", resp.Code)
+	}
+	if resp = call("GET", "/api/v1/admin/network/egress", "", adminCookie, ""); resp.Code != 200 ||
+		strings.Contains(resp.Body.String(), "manifestUrl") {
+		t.Fatalf("egress API exposed source settings: %d", resp.Code)
+	}
 	if resp = call("POST", "/api/v1/media/sessions",
 		`{"sourceId":"invalid","type":"movie","id":"tt123","index":0}`,
 		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); resp.Code != 400 {

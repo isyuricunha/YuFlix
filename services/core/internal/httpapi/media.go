@@ -189,7 +189,7 @@ func (a *api) listMediaStreams(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		checked++
-		report, err := a.catalogClient.StreamsDetailed(ctx, addon.ManifestURL, typ, id)
+		report, _, err := a.catalogClient.RouteStreams(ctx, addon.ManifestURL, typ, id, addon.NetworkRoute)
 		if err != nil {
 			errorsCount++
 			status := ProviderStatus{Name: addon.Name, State: "error", Reason: safeProviderReason(err)}
@@ -250,7 +250,8 @@ func (a *api) startMediaSession(w http.ResponseWriter, r *http.Request) {
 		failure(w, 503, "provedor indisponível")
 		return
 	}
-	streams, err := a.catalogClient.Streams(ctx, addon.ManifestURL, input.Type, input.ID)
+	report, remote, err := a.catalogClient.RouteStreams(ctx, addon.ManifestURL, input.Type, input.ID, addon.NetworkRoute)
+	streams := report.Streams
 	if err != nil || len(streams) <= input.Index {
 		failure(w, 422, "fonte de vídeo indisponível")
 		return
@@ -262,7 +263,7 @@ func (a *api) startMediaSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	remote := a.catalogClient.UsesEgress(addon.ManifestURL)
+	// The selected transport comes from the provider routing configuration.
 	var probeErr error
 	if remote {
 		probeErr = a.catalogClient.ProbeViaEgress(ctx, addon.ManifestURL, input.Type, input.ID, candidate.URL)
@@ -345,4 +346,63 @@ func (a *api) candidateKey(sourceID, videoID, url string) string {
 	h.Write([]byte{0})
 	h.Write([]byte(url))
 	return base64.RawURLEncoding.EncodeToString(h.Sum(nil))
+}
+
+// Configuring a source changes its future stream discovery and invalidates
+// current tickets for that source. Bootstrap-only egress secrets stay server-side.
+func (a *api) updateStreamAddonRoute(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "sourceID")
+	if !sourceIDRE.MatchString(id) {
+		failure(w, 400, "identificador inválido")
+		return
+	}
+	var input struct {
+		Route string `json:"route"`
+	}
+	if decodeJSON(r, &input) != nil || (input.Route != "direct" && input.Route != "egress" && input.Route != "auto") {
+		failure(w, 400, "rota inválida")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	addon, err := a.db.StreamAddon(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		failure(w, 404, "provedor não encontrado")
+		return
+	}
+	if err != nil {
+		failure(w, 503, "provedor indisponível")
+		return
+	}
+	if input.Route != "direct" && !a.catalogClient.EgressAvailableFor(addon.ManifestURL) {
+		failure(w, 409, "nenhum egress autorizado para este provedor")
+		return
+	}
+	updated, err := a.db.UpdateStreamAddonRoute(ctx, id, input.Route)
+	if err != nil {
+		failure(w, 503, "não foi possível alterar a rede do provedor")
+		return
+	}
+	a.video.mu.Lock()
+	for key, ticket := range a.video.items {
+		if ticket.sourceID == id {
+			delete(a.video.items, key)
+		}
+	}
+	a.video.mu.Unlock()
+	writeJSON(w, 200, map[string]any{"source": updated})
+}
+func (a *api) streamEgressOptions(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	addons, err := a.db.ListStreamAddons(ctx)
+	if err != nil {
+		failure(w, 503, "fontes indisponíveis")
+		return
+	}
+	available := make(map[string]bool, len(addons))
+	for _, item := range addons {
+		available[item.ID] = a.catalogClient.EgressAvailableFor(item.ManifestURL)
+	}
+	writeJSON(w, 200, map[string]any{"availableForSources": available})
 }
