@@ -50,3 +50,5 @@ On 2026-10-31, an isolated, ephemeral Playwright Chromium headless shell on LAB 
 Series episode selection precedes source discovery and uses a bounded, scrollable episode grid to avoid forcing a long scroll past every episode.
 
 The viewer now sees a single Watch now action. Source priority, timeout and troubleshooting remain in Administration. The player can request a fallback source after a media error and attempts the next actual episode when one exists in metadata. Subtitles, audio tracks, HLS and transcoding are not represented as available until implemented and tested.
+
+The catalog Hero now rotates only actual featured artwork from loaded catalogs (maximum six items), filters highlights by Movies/Series, pauses while hovered or focused, offers previous/next and explicit pause controls, and honors prefers-reduced-motion. Carousel controls are not shown for single-item highlights. No promotional content is fabricated.
