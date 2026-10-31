@@ -4,9 +4,9 @@
 
 - Core: Go HTTP service with liveness, readiness and a public, non-sensitive status endpoint.
 - Web: single-origin React application; the web gateway forwards /api to Core.
-- Media planning: pure Go decision logic to decide Direct Play, remux or selective transcode. It does not probe, download or play media.
-- Persistence: PostgreSQL 17 schema and pgx pool support users, sessions, settings, and future progress. No production database is connected yet; sqlc generation is pending.
-- Authentication uses Argon2id, revocable sessions and admin RBAC. Endpoints fail closed until DB migrations and an approved HTTP/HTTPS origin are configured. Actual media routes do not exist.
+- Media: Go decision logic and experimental progressive MP4 Direct Play relay with bounded Range probes, scoped in-memory session tickets and optional private egress. HLS, remux and selective transcode remain planned.
+- Persistence: PostgreSQL 17 with pgx supports the dedicated user/session/settings/source tables. The LAB instance has an active database connection; progress history and sqlc generation remain pending.
+- Authentication uses Argon2id, revocable sessions and admin RBAC. Endpoints fail closed until DB migrations and an approved HTTP/HTTPS origin are configured. Current media routes handle eligible MP4 sources only.
 - YuTheme is imported as an external dependency; do not duplicate or override its palette.
 
 ## Target data flow
@@ -21,7 +21,7 @@ Direct Play takes precedence. Remux copies supported audio/video codecs into an 
 
 ## Deployment topology
 
-Two containers in the foundation: Core and Web. The web gateway binds to a high host port on all interfaces; no firewall or DNS changes are made. Media worker and PostgreSQL integration are intentionally deferred to avoid deploying a non-functional mock player. Support both native Go binaries and Compose; existing third-party media services are never modified.
+Core and Web form the default Compose stack. An optional isolated private egress role serves approved sources over an authenticated private channel; it is never required. The web gateway binds to a high host port. A native FFmpeg media worker remains future work. Support both native Go binaries and Compose; existing third-party media services are never modified.
 
 ## Roadmap
 
@@ -43,4 +43,4 @@ The bundled Core trusts X-Forwarded-Proto only from its private Caddy gateway, w
 
 ## Current user experience
 
-React Router supplies three real route boundaries: public login, authenticated home and admin-only configuration. The legacy combined diagnostic page and login form have been replaced. The app restores sessions from the backend and never stores session tokens or user passwords in browser storage. The authenticated home does not claim media playback capability. Details are in docs/web-ui.md.
+React Router supplies public login, authenticated home, title details and admin-only configuration. The legacy combined diagnostic page and login form have been replaced. The app restores sessions from the backend and never stores session tokens or user passwords in browser storage. The authenticated home presents only real catalog metadata; the title view exposes an explicitly experimental MP4 source and playback flow. Details are in docs/web-ui.md.

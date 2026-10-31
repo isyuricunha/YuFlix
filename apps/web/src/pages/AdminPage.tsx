@@ -1,17 +1,21 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useEffect, useState, ViewTransition, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router'
 import { APIError, api, type SettingValues, type User } from '../api'
-import { useAuth } from '../auth/AuthContext'
-import Brand from '../components/Brand'
 import CatalogSources from '../components/CatalogSources'
 import StreamSources from '../components/StreamSources'
 
 type Section = 'overview' | 'users' | 'preferences' | 'catalogs' | 'streams'
 
 export default function AdminPage() {
-  const { user, logout } = useAuth()
-  const navigate = useNavigate()
-  const [section, setSection] = useState<Section>('overview')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedSection = searchParams.get('section')
+  const section: Section = requestedSection === 'users' || requestedSection === 'preferences' ||
+    requestedSection === 'catalogs' || requestedSection === 'streams' ? requestedSection : 'overview'
+  function changeSection(value: Section) {
+    setError('')
+    setNotice('')
+    setSearchParams(value === 'overview' ? {} : { section: value })
+  }
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -68,24 +72,7 @@ export default function AdminPage() {
     } finally { setBusy(false) }
   }
 
-  async function signOut() {
-    if (busy) return
-    setBusy(true); setError('')
-    try { await logout(); navigate('/login', { replace: true }) }
-    catch { setError('Não foi possível encerrar a sessão.') }
-    finally { setBusy(false) }
-  }
-
   return <div className="yf-admin">
-    <header className="yf-admin__topbar">
-      <Brand compact />
-      <Link to="/" className="yf-admin__back">Voltar ao início</Link>
-      <div className="yf-admin__account"><span className="yf-avatar" aria-hidden="true">{user?.username.slice(0,1).toUpperCase()}</span>
-        <span>{user?.username}</span>
-        <button className="yf-admin__signout" type="button" disabled={busy} onClick={signOut}>Sair</button>
-      </div>
-    </header>
-
     <div className="yf-admin__layout">
       <aside className="yf-admin__sidebar">
         <span className="yf-kicker">CONFIGURAÇÕES</span>
@@ -97,14 +84,16 @@ export default function AdminPage() {
             ['catalogs', 'Catálogos'],
             ['streams', 'Reprodução'],
           ] as const).map(([key, label]) =>
-            <button type="button" key={key} onClick={() => { setSection(key); setError(''); setNotice('') }}
-              className={section === key ? 'is-active' : ''} aria-pressed={section === key}>
+            <button type="button" key={key} onClick={() => changeSection(key)}
+              className={section === key ? 'is-active' : ''} aria-current={section === key ? 'page' : undefined}>
               {label}
             </button>)}
         </nav>
       </aside>
 
-      <main className="yf-admin__content">
+      <div className="yf-admin__content">
+        <ViewTransition name="yf-admin-panel">
+          <div className="yf-admin__panel" key={section}>
         <div className="yf-admin__heading">
           <span className="yf-kicker">YUFLIX / ADMINISTRAÇÃO</span>
           <h1>{section === 'overview' ? 'Visão geral' : section === 'users' ? 'Usuários' : section === 'catalogs' ? 'Catálogos' : section === 'streams' ? 'Reprodução' : 'Preferências'}</h1>
@@ -123,13 +112,13 @@ export default function AdminPage() {
           </div>
           <div className="yf-admin__summary-list">
             <div><div><h2>Usuários</h2><p>Gerencie contas e permissões.</p></div>
-              <button type="button" onClick={() => setSection('users')}>Gerenciar <span aria-hidden="true">→</span></button></div>
+              <button type="button" onClick={() => changeSection('users')}>Gerenciar <span aria-hidden="true">→</span></button></div>
             <div><div><h2>Preferências</h2><p>Idioma e comportamento de reprodução.</p></div>
-              <button type="button" onClick={() => setSection('preferences')}>Configurar <span aria-hidden="true">→</span></button></div>
+              <button type="button" onClick={() => changeSection('preferences')}>Configurar <span aria-hidden="true">→</span></button></div>
             <div><div><h2>Catálogos</h2><p>Gerencie os provedores de metadados.</p></div>
-              <button type="button" onClick={() => setSection('catalogs')}>Configurar <span aria-hidden="true">→</span></button></div>
+              <button type="button" onClick={() => changeSection('catalogs')}>Configurar <span aria-hidden="true">→</span></button></div>
             <div><div><h2>Reprodução</h2><p>Adicione provedores e teste Direct Play MP4.</p></div>
-              <button type="button" onClick={() => setSection('streams')}>Configurar <span aria-hidden="true">→</span></button></div>
+              <button type="button" onClick={() => changeSection('streams')}>Configurar <span aria-hidden="true">→</span></button></div>
           </div>
         </section>}
 
@@ -192,7 +181,9 @@ export default function AdminPage() {
 
         {notice && <p role="status" className="yf-admin__notice">{notice}</p>}
         {error && <p role="alert" className="yf-alert">{error}</p>}
-      </main>
+          </div>
+        </ViewTransition>
+      </div>
     </div>
   </div>
 }

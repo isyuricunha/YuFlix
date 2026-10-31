@@ -1,6 +1,7 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router'
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router'
 import type { ReactNode } from 'react'
 import { AuthProvider, useAuth } from './auth/AuthContext'
+import AppShell from './components/AppShell'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
@@ -30,13 +31,19 @@ function GuestOnly({ children }: { children: ReactNode }) {
   return children
 }
 
+function AuthenticatedLayout() {
+  return <RequireUser><AppShell><Outlet /></AppShell></RequireUser>
+}
+
 export default function App() {
   return <AuthProvider>
     <Routes>
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
-      <Route path="/" element={<RequireUser><HomePage /></RequireUser>} />
-      <Route path="/admin" element={<RequireUser admin><AdminPage /></RequireUser>} />
-      <Route path="/title/:sourceId/:type/:id" element={<RequireUser><TitlePage /></RequireUser>} />
+      <Route element={<AuthenticatedLayout />}>
+        <Route index element={<HomePage />} />
+        <Route path="admin" element={<RequireUser admin><AdminPage /></RequireUser>} />
+        <Route path="title/:sourceId/:type/:id" element={<TitlePage />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </AuthProvider>
