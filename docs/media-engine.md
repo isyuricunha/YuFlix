@@ -56,3 +56,33 @@ Before considering the Media Engine production complete, run real source session
 YuFlix distinguishes upstream HTTP denial (403), no streams returned, unsupported media formats, timeout and other network failures in the authenticated title view. Responses carry only provider display names and sanitized error codes. Manifest and signed stream URLs are never returned.
 
 An addon manifest returning 200 only means registration succeeded. HTTP 403 for /stream/... is an upstream access refusal. AIOStreams can display cached or library-backed sources; its "(Your Media)" formatter label identifies library-backed media rather than proving that a public addon is returning fresh results.
+
+## Optional private-network stream discovery egress
+
+If a Stremio provider permits stream queries from a second, user-owned machine
+but not the main YuFlix Core host, the operator can deploy the small YuFlix
+egress role on that machine. This is an optional network transport, not an
+AIOStreams dependency or a generic proxy.
+
+- Egress binds **only** to an explicitly configured Tailscale IP (port 62582).
+- Both machines must be in the same authorized Tailscale network.
+- A randomly generated bearer secret authenticates requests. The secret and
+  Tailscale address belong only to private bootstrap configuration, not Git.
+- Set YUFLIX_EGRESS_TOKEN and YUFLIX_EGRESS_ALLOWED_HOSTS on the egress host.
+- Set YUFLIX_STREAM_EGRESS_URL, YUFLIX_STREAM_EGRESS_TOKEN, and
+  YUFLIX_STREAM_EGRESS_HOSTS on the Core host.
+- Configure the egress using deploy/egress.compose.yaml with private
+  YUFLIX_EGRESS_BIND_IP and YUFLIX_EGRESS_ENV_FILE values.
+
+Only public HTTPS addon stream discovery requests for allowlisted hostnames are
+accepted. Each URL goes through YuFlix's ordinary SSRF, DNS pinning, and
+response-size validation. HTTPS media streams continue to be relayed directly
+by Core; the egress role does **not** carry video bytes. If a video's CDN is
+not reachable from Core, playback remains unsupported until a separately
+designed, tested media transport is available.
+
+The egress role has a small in-memory TTL cache, three concurrent requests,
+restricted CPU/RAM, no persistent state, and returns only candidates to the
+private Core over Tailscale encryption. If egress is not configured, YuFlix
+behaves exactly as before. The relay should never be published on a public
+network interface.

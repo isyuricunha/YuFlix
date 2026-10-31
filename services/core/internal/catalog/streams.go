@@ -130,6 +130,9 @@ func (c *Client) StreamsDetailed(ctx context.Context, manifestURL, typ, videoID 
 	if err != nil || (typ != "movie" && typ != "series") || !ValidMediaID(videoID) {
 		return StreamReport{}, ErrUnsafeURL
 	}
+	if c.egress != nil && c.egress.handles(url) {
+		return c.egress.streams(ctx, url, typ, videoID)
+	}
 	base := strings.TrimSuffix(url, "/manifest.json")
 	var payload struct {
 		Streams []streamEntry `json:"streams"`

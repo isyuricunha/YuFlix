@@ -1,0 +1,29 @@
+name: yuflix-egress
+services:
+  egress:
+    build:
+      context: ../services/core
+      dockerfile: Dockerfile.egress
+    restart: unless-stopped
+    env_file:
+      - path: ${YUFLIX_EGRESS_ENV_FILE:?secrets path required}
+    environment:
+      YUFLIX_EGRESS_ADDR: "0.0.0.0:62582"
+    ports:
+      - "${YUFLIX_EGRESS_BIND_IP:?Tailscale bind required}:62582:62582"
+    read_only: true
+    tmpfs: [/tmp:size=16m,noexec,nosuid]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 48
+    mem_limit: 96m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options: {max-size: "2m", max-file: "3"}
+    healthcheck:
+      test: ["CMD","wget","-q","-O","/dev/null","http://127.0.0.1:62582/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s

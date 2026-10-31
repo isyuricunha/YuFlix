@@ -68,7 +68,10 @@ type Detail struct {
 		Episode int    `json:"episode"`
 	} `json:"videos,omitempty"`
 }
-type Client struct{ client *http.Client }
+type Client struct {
+	client *http.Client
+	egress *EgressTransport
+}
 
 func AllowedIP(ip netip.Addr) bool {
 	if !ip.IsValid() {
@@ -239,7 +242,7 @@ func NewClient() *Client {
 			return nil, last
 		},
 	}
-	return &Client{client: &http.Client{Transport: transport, Timeout: 10 * time.Second, CheckRedirect: func(req *http.Request, previous []*http.Request) error {
+	return &Client{egress: NewEgressFromEnvironment(), client: &http.Client{Transport: transport, Timeout: 10 * time.Second, CheckRedirect: func(req *http.Request, previous []*http.Request) error {
 		if len(previous) >= 3 || !safeRedirect(req.URL) {
 			return http.ErrUseLastResponse
 		}
