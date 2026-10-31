@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
 import TitlePage from './pages/TitlePage'
+import SearchPage from './pages/SearchPage'
 
 function LoadingScreen() {
   return <div className="yf-loading" role="status" aria-live="polite">
@@ -41,6 +42,8 @@ export default function App() {
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route element={<AuthenticatedLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="browse/:kind" element={<HomePage />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="admin" element={<RequireUser admin><AdminPage /></RequireUser>} />
         <Route path="title/:sourceId/:type/:id" element={<TitlePage />} />
       </Route>

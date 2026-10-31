@@ -1,0 +1,43 @@
+/* Shared category navigation: spacious on desktop, accessible swipe rail on mobile. */
+.yf-shell__nav {
+  min-width:0;
+  max-width:100%;
+  overflow-x:auto;
+  scrollbar-width:none;
+  overscroll-behavior-inline:contain;
+  scroll-snap-type:x proximity;
+}
+.yf-shell__nav::-webkit-scrollbar { display:none; }
+.yf-shell__nav a {
+  min-width:0;
+  white-space:nowrap;
+  flex:0 0 auto;
+  scroll-snap-align:center;
+  padding-inline:16px;
+  font-size:12px;
+}
+.yf-catalog-filters {
+  min-width:0;
+  max-width:100%;
+  overflow-x:auto;
+  scrollbar-width:none;
+  overscroll-behavior-inline:contain;
+}
+.yf-catalog-filters::-webkit-scrollbar{display:none}
+.yf-catalog-filters button {white-space:nowrap;flex:0 0 auto;padding-inline:15px}
+@media(max-width:1050px) {
+  .yf-shell__header {grid-template-columns:auto minmax(0,1fr) auto;gap:12px;padding-inline:20px;}
+  .yf-shell__nav {justify-self:stretch;justify-content:flex-start;}
+}
+@media(max-width:560px) {
+  .yf-shell__header {grid-template-columns:minmax(0,1fr) auto;row-gap:10px;padding-bottom:10px;}
+  .yf-shell__nav {grid-column:1/-1;grid-row:2;justify-content:flex-start;}
+  .yf-shell__nav a {flex:0 0 auto;min-width:0;padding-inline:16px;}
+  .yf-admin__sidebar {top:112px}
+  .yf-catalog-toolbar {align-items:start;flex-direction:column;gap:20px;}
+  .yf-catalog-filters {width:100%;justify-content:flex-start}
+  .yf-catalog-filters button {padding-inline:16px}
+}
+@media(prefers-reduced-motion:reduce) {
+  .yf-shell__nav, .yf-catalog-filters {scroll-behavior:auto;}
+}

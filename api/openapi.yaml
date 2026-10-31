@@ -16,6 +16,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemInfo'
+  /catalog/search:
+    get:
+      summary: Search locally cached catalog metadata
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string, minLength: 2, maxLength: 64}}
+      responses:
+        '200': {description: Maximum of 48 cached catalog titles}
+        '400': {description: Invalid search}
+  /admin/catalog/providers:
+    get:
+      summary: List reviewed catalog providers
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Provider gallery entries}
+        '403': {description: Not administrator}
+  /admin/catalog/providers/{providerID}:
+    post:
+      summary: Install a selected reviewed provider
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: providerID, in: path, required: true, schema: {type: string}}
+      responses:
+        '201': {description: Catalog registered}
+        '404': {description: Unknown provider}
+        '409': {description: Already installed or disabled}
+        '422': {description: Provider unavailable}
   /catalog/sources:
     get:
       summary: List shared public Stremio catalog sources

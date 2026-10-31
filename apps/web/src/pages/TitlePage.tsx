@@ -11,6 +11,7 @@ export default function TitlePage() {
   const [episodeId, setEpisodeId] = useState('')
   const [autoNext, setAutoNext] = useState(false)
   const { user } = useAuth()
+  const isCollection = Boolean(item?.id.startsWith('ctmdb.'))
 
   useEffect(() => {
     let active = true
@@ -33,7 +34,7 @@ export default function TitlePage() {
     {item && <div className="yf-title-page__main">
       {item.background && <img className="yf-title-page__background" src={item.background} alt="" referrerPolicy="no-referrer" />}
       <div className="yf-title-page__content">
-        <span className="yf-kicker">{item.type === 'movie' ? 'FILME' : 'SÉRIE'}</span>
+        <span className="yf-kicker">{item.type === 'movie' ? 'FILME' : isCollection ? 'COLEÇÃO' : item.type === 'anime' ? 'ANIME' : 'SÉRIE'}</span>
         <h1>{item.name}</h1>
         <div className="yf-title-page__meta">
           {item.releaseInfo && <span>{item.releaseInfo}</span>}
@@ -42,20 +43,24 @@ export default function TitlePage() {
         {item.description && <p>{item.description}</p>}
         {item.videos && item.videos.length > 0 && <section className="yf-title-page__episodes" aria-labelledby="episode-heading">
           <div className="yf-title-page__episodes-heading">
-            <div><span className="yf-kicker">CONTINUAR EXPLORANDO</span><h2 id="episode-heading">Episódios</h2></div>
+            <div><span className="yf-kicker">CONTINUAR EXPLORANDO</span><h2 id="episode-heading">{isCollection ? 'Filmes da coleção' : 'Episódios'}</h2></div>
             <span>{Math.min(item.videos.length, 30)} disponíveis no catálogo</span>
           </div>
           <div className="yf-title-page__episode-list">{item.videos.slice(0, 30).map(ep => <button type="button"
             className={episodeId === ep.id ? 'yf-episode is-selected' : 'yf-episode'}
             aria-pressed={episodeId === ep.id} key={ep.id} onClick={() => {setAutoNext(false);startTransition(() => setEpisodeId(ep.id))}}>
             <span className="yf-episode__number">{String(ep.episode || '?').padStart(2, '0')}</span>
-            <span className="yf-episode__title"><strong>{ep.title || 'Episódio ' + (ep.episode || '?')}</strong>
-              <small>{ep.season ? 'Temporada ' + ep.season + ' · ' : ''}Episódio {ep.episode || '?'}</small>
+            <span className="yf-episode__title"><strong>{ep.title || (isCollection ? 'Filme' : 'Episódio') + ' ' + (ep.episode || '?')}</strong>
+              <small>{isCollection ? 'Filme da coleção' : (ep.season ? 'Temporada ' + ep.season + ' · ' : '') + 'Episódio ' + (ep.episode || '?')}</small>
             </span>
             <span className="yf-episode__arrow" aria-hidden="true">→</span>
           </button>)}</div>
         </section>}
-        {item.type === 'movie' ? <MediaSources type="movie" videoId={item.id} contentTitle={item.name} isAdmin={user?.role === 'admin'} /> :
+        {isCollection ? (episodeId ? <MediaSources key={episodeId} type="movie" videoId={episodeId}
+          contentTitle={item.videos?.find(video => video.id === episodeId)?.title || item.name}
+          isAdmin={user?.role === 'admin'} /> :
+          <p className="yf-catalog-note">Escolha um filme da coleção para encontrar uma reprodução compatível.</p>) :
+        item.type === 'movie' ? <MediaSources type="movie" videoId={item.imdb_id?.match(/^tt[0-9]{7,10}$/) ? item.imdb_id : item.id} contentTitle={item.name} isAdmin={user?.role === 'admin'} /> :
           <ViewTransition name="yf-episode-media">
             <div key={episodeId || 'none'} className="yf-title-page__episode-media">
               {episodeId ? <MediaSources type="series" videoId={episodeId} contentTitle={item.name} isAdmin={user?.role === 'admin'}

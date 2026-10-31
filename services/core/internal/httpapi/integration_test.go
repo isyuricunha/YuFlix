@@ -85,6 +85,16 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if resp = call("GET", "/api/v1/auth/me", "", adminCookie, ""); resp.Code != 200 {
 		t.Fatalf("me %d", resp.Code)
 	}
+	if response := call("GET", "/api/v1/admin/catalog/providers", "", adminCookie, ""); response.Code != 200 ||
+		!strings.Contains(response.Body.String(), `"id":"tmdb"`) ||
+		!strings.Contains(response.Body.String(), `"id":"tmdb-collections"`) ||
+		strings.Contains(response.Body.String(), "manifest.json") {
+		t.Fatal("unsafe or missing curated catalog provider listing")
+	}
+	if response := call("POST", "/api/v1/admin/catalog/providers/unknown", "", adminCookie,
+		"https://stream.example.com"); response.Code != 404 {
+		t.Fatal("unknown provider was accepted")
+	}
 	if resp = call("GET", "/api/v1/admin/users", "", adminCookie, ""); resp.Code != 200 {
 		t.Fatalf("list users %d", resp.Code)
 	}
@@ -135,6 +145,9 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if response := call("GET", "/api/v1/admin/media/cache", "", memberCookie.Name+"="+memberCookie.Value, ""); response.Code != 403 {
 		t.Fatal("member accessed media cache settings")
 	}
+	if response := call("GET", "/api/v1/admin/catalog/providers", "", memberCookie.Name+"="+memberCookie.Value, ""); response.Code != 403 {
+		t.Fatal("member accessed provider integration registry")
+	}
 	if resp = call("GET", "/api/v1/admin/users", "", memberCookie.Name+"="+memberCookie.Value, ""); resp.Code != 403 {
 		t.Fatalf("member accessed admin %d", resp.Code)
 	}
@@ -144,9 +157,27 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, kind := range []string{"anime", "collections"} {
+		if err := store.SaveCatalogSnapshot(ctx, source.ID, kind, "top", []byte(`[]`)); err != nil {
+			t.Fatalf("new catalog kind cache unavailable: %s (%v)", kind, err)
+		}
+	}
 	if err := store.SaveCatalogSnapshot(ctx, source.ID, "movie", "top",
 		[]byte(`[{"id":"tt123","type":"movie","name":"Cached"}]`)); err != nil {
 		t.Fatal("cannot persist catalog snapshot", err)
+	}
+	matches, searchErr := store.SearchCachedTitles(ctx, "Cached")
+	if searchErr != nil || len(matches) != 1 || matches[0].SourceID != source.ID {
+		t.Fatalf("cached title search failed: %+v (%v)", matches, searchErr)
+	}
+	if response := call("GET", "/api/v1/catalog/search?q=Cached", "",
+		memberCookie.Name+"="+memberCookie.Value, ""); response.Code != 200 ||
+		!strings.Contains(response.Body.String(), `"scope":"cached_catalogs"`) {
+		t.Fatalf("member cached catalog search failed: %d", response.Code)
+	}
+	if response := call("GET", "/api/v1/catalog/search?q=x", "",
+		memberCookie.Name+"="+memberCookie.Value, ""); response.Code != 400 {
+		t.Fatal("invalid short search accepted")
 	}
 	if cached, _, err := store.CatalogSnapshot(ctx, source.ID, "movie", "top"); err != nil || !strings.Contains(string(cached), "Cached") {
 		t.Fatal("catalog snapshot not readable")

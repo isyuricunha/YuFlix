@@ -4,7 +4,7 @@ import { api, type CatalogSource, type CatalogDefinition, type CatalogItem } fro
 import FeaturedHero from './FeaturedHero'
 
 type Shelf = { source: CatalogSource; catalog: CatalogDefinition; items: CatalogItem[]; failed?: boolean }
-type Kind = 'all' | 'movie' | 'series'
+type Kind = 'all' | 'movie' | 'series' | 'anime' | 'collections'
 
 function MediaShelf({ shelf }: { shelf: Shelf }) {
   const rail = useRef<HTMLDivElement>(null)
@@ -22,7 +22,7 @@ function MediaShelf({ shelf }: { shelf: Shelf }) {
         <h2>{shelf.catalog.name}</h2>
       </div>
       <div className="yf-media-shelf__controls">
-        <span>{shelf.catalog.type === 'movie' ? 'Filmes' : 'Séries'}</span>
+        <span>{shelf.catalog.type === 'movie' ? 'Filmes' : shelf.catalog.type === 'anime' ? 'Animes' : shelf.catalog.type === 'collections' ? 'Coleções' : 'Séries'}</span>
         <button type="button" onClick={() => scroll(-1)} aria-label={'Voltar capas: ' + name}>‹</button>
         <button type="button" onClick={() => scroll(1)} aria-label={'Avançar capas: ' + name}>›</button>
       </div>
@@ -42,12 +42,13 @@ function MediaShelf({ shelf }: { shelf: Shelf }) {
   </section>
 }
 
-export default function CatalogHome({ isAdmin, onCatalogPresent }: { isAdmin: boolean; onCatalogPresent: Dispatch<SetStateAction<boolean>> }) {
+export default function CatalogHome({ isAdmin, onCatalogPresent, initialKind='all' }: { isAdmin: boolean; onCatalogPresent: Dispatch<SetStateAction<boolean>>; initialKind?: Kind }) {
   const [sources, setSources] = useState<CatalogSource[]>([])
   const [shelves, setShelves] = useState<Shelf[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [kind, setKind] = useState<Kind>('all')
+  const [kind, setKind] = useState<Kind>(initialKind)
+  useEffect(() => { setKind(initialKind) }, [initialKind])
 
   useEffect(() => {
     let active = true
@@ -57,9 +58,17 @@ export default function CatalogHome({ isAdmin, onCatalogPresent }: { isAdmin: bo
         if (!active) return
         setSources(response.sources)
         onCatalogPresent(response.sources.length > 0)
-        const chosen = response.sources.filter(source => source.enabled)
-          .flatMap(source => source.catalogs.filter(c => c.type === 'movie' || c.type === 'series')
-            .slice(0, 2).map(catalog => ({ source, catalog }))).slice(0, 4)
+        const enabledGroups = response.sources.filter(source=>source.enabled).map(source=>({
+          source, catalogs:source.catalogs.filter(c=>['movie','series','anime','collections'].includes(c.type)).slice(0,3),
+        }))
+        const chosen: {source:CatalogSource;catalog:CatalogDefinition}[]=[]
+        for(let index=0;index<3 && chosen.length<8;index++) {
+          for(const group of enabledGroups){
+            const catalog=group.catalogs[index]
+            if(catalog)chosen.push({source:group.source,catalog})
+            if(chosen.length===8)break
+          }
+        }
         if (!chosen.length) { setLoading(false); return }
         const all = await Promise.all(chosen.map(async item => {
           try {
@@ -100,7 +109,7 @@ export default function CatalogHome({ isAdmin, onCatalogPresent }: { isAdmin: bo
     <div className="yf-catalog-toolbar">
       <div><span className="yf-kicker">ESCOLHA O QUE ASSISTIR</span><h2>Explore sua biblioteca</h2></div>
       <div className="yf-catalog-filters" role="group" aria-label="Filtrar títulos">
-        {([['all', 'Tudo'], ['movie', 'Filmes'], ['series', 'Séries']] as const).map(([key, label]) =>
+        {([['all', 'Tudo'], ['movie', 'Filmes'], ['series', 'Séries'], ['anime', 'Animes'], ['collections', 'Coleções']] as const).map(([key, label]) =>
           <button type="button" key={key} aria-pressed={kind === key} className={kind === key ? 'is-active' : ''}
             onClick={() => startTransition(() => setKind(key))}>{label}</button>)}
       </div>

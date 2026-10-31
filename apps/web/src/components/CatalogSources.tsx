@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { api, type CatalogSource, type CacheMode } from '../api'
+import CatalogProviderGallery from './CatalogProviderGallery'
 
 export default function CatalogSources() {
   const [sources, setSources] = useState<CatalogSource[]>([])
@@ -74,6 +75,7 @@ export default function CatalogSources() {
   return <section className="yf-admin__catalogs" aria-labelledby="catalog-title">
     <h2 id="catalog-title">Fontes compartilhadas</h2>
     <p className="yf-admin__muted">Adicione catálogos do protocolo Stremio. Todos os usuários verão os mesmos títulos, mas mantêm sessões e histórico individuais.</p>
+    <CatalogProviderGallery onInstalled={source => setSources(items => [...items, source])} />
     {!loading && sources.length>0 && <div className="yf-admin__cache-all">
       <label htmlFor="cache-all-mode">Cache para todas as fontes</label>
       <select id="cache-all-mode" value={bulkMode} disabled={busy}
@@ -102,8 +104,9 @@ export default function CatalogSources() {
       </div>)}
       {!sources.length && <p className="yf-admin__muted">Nenhuma fonte cadastrada.</p>}
     </div>}
-    <div className="yf-admin__source-create">
-      <h3>Adicionar catálogo Stremio</h3>
+    <details className="yf-admin__source-create">
+      <summary>Adicionar manifesto personalizado (avançado)</summary>
+      <h3>Integração Stremio personalizada</h3>
       <form onSubmit={add} className="yf-admin__form">
         <label htmlFor="addon-url">Endereço do manifesto</label>
         <input id="addon-url" type="url" required autoComplete="url" value={url} disabled={busy}
@@ -111,7 +114,7 @@ export default function CatalogSources() {
         <button type="submit" className="yf-admin__primary" disabled={busy}>{busy?'Validando manifesto...':'Adicionar fonte'}</button>
       </form>
       <p className="yf-admin__muted">Por segurança, esta etapa aceita apenas URLs públicas HTTPS com configurações no caminho, sem query string. Addons privados e IPTV serão tratados em uma integração separada.</p>
-    </div>
+    </details>
     {notice && <p role="status" className="yf-admin__notice">{notice}</p>}
     {error && <p role="alert" className="yf-alert">{error}</p>}
   </section>

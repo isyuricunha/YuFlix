@@ -200,7 +200,7 @@ func (a *api) catalogMeta(w http.ResponseWriter, r *http.Request) {
 	}
 	allowed := false
 	for _, c := range src.Catalogs {
-		if c.Type == typ {
+		if c.Type == typ || (c.Type == "anime" && typ == "series") || (c.Type == "collections" && typ == "movie") {
 			allowed = true
 			break
 		}
