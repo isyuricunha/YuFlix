@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext'
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
+import TitlePage from './pages/TitlePage'
 
 function LoadingScreen() {
   return <div className="yf-loading" role="status" aria-live="polite">
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/" element={<RequireUser><HomePage /></RequireUser>} />
       <Route path="/admin" element={<RequireUser admin><AdminPage /></RequireUser>} />
+      <Route path="/title/:sourceId/:type/:id" element={<RequireUser><TitlePage /></RequireUser>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </AuthProvider>

@@ -16,6 +16,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemInfo'
+  /catalog/sources:
+    get:
+      summary: List shared public Stremio catalog sources
+      security: [{sessionCookie: []}]
+      responses:
+        '200': {description: Safe source names and catalog IDs without manifest URLs}
+        '401': {description: Login required}
+  /catalog/sources/{sourceID}/items:
+    get:
+      summary: Fetch catalog metadata and posters, not streams
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: type, in: query, required: true, schema: {type: string, enum: [movie, series]}}
+        - {name: catalog, in: query, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Non-playback metadata}
+        '502': {description: Provider unavailable}
+  /catalog/sources/{sourceID}/meta:
+    get:
+      summary: Fetch Stremio title metadata
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: type, in: query, required: true, schema: {type: string, enum: [movie, series]}}
+        - {name: id, in: query, required: true, schema: {type: string}}
+      responses:
+        '200': {description: Title metadata only}
+  /admin/catalog/sources:
+    post:
+      summary: Register a public Stremio catalog (admin)
+      security: [{sessionCookie: []}]
+      responses:
+        '201': {description: Source registered}
+        '422': {description: Invalid or unsupported manifest}
+  /admin/catalog/sources/{sourceID}:
+    delete:
+      summary: Remove a shared public catalog source (admin)
+      security: [{sessionCookie: []}]
+      parameters:
+        - {name: sourceID, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204': {description: Removed}
   /auth/login:
     post:
       summary: Log in with an individual username and password

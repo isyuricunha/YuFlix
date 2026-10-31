@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/isyuricunha/YuFlix/services/core/internal/auth"
+	"github.com/isyuricunha/YuFlix/services/core/internal/catalog"
 	"github.com/isyuricunha/YuFlix/services/core/internal/db"
 	"github.com/isyuricunha/YuFlix/services/core/internal/httpapi"
 	"golang.org/x/term"
@@ -28,7 +29,7 @@ func main() {
 		return
 	}
 
-	if len(os.Args) > 1 && (os.Args[1] == "migrate" || os.Args[1] == "bootstrap-admin" || os.Args[1] == "db-check") {
+	if len(os.Args) > 1 && (os.Args[1] == "migrate" || os.Args[1] == "bootstrap-admin" || os.Args[1] == "db-check" || os.Args[1] == "add-public-catalog") {
 		if err := runAdminCommand(); err != nil {
 			fmt.Fprintln(os.Stderr, "operation failed:", err)
 			os.Exit(1)
@@ -152,6 +153,40 @@ func runAdminCommand() error {
 			return err
 		}
 		fmt.Println("YuFlix schema migrated")
+		return nil
+	case "add-public-catalog":
+		if len(os.Args) != 3 {
+			return fmt.Errorf("usage: yuflix add-public-catalog <public-https-manifest-url>")
+		}
+		endpoint := os.Args[2]
+		if _, err := catalog.ValidateManifestURL(endpoint); err != nil {
+			return fmt.Errorf("invalid public manifest URL")
+		}
+		if !d.SchemaReady(ctx) {
+			return fmt.Errorf("database schema is not ready")
+		}
+		existing, err := d.ListCatalogSources(ctx)
+		if err != nil {
+			return fmt.Errorf("unable to inspect catalog list")
+		}
+		for _, item := range existing {
+			if item.ManifestURL == endpoint {
+				fmt.Printf("Public catalog already configured: %s\n", item.Name)
+				return nil
+			}
+		}
+		addon, err := catalog.NewClient().Manifest(ctx, endpoint)
+		if err != nil {
+			return fmt.Errorf("public catalog could not be validated")
+		}
+		cats := make([]db.StoredCatalog, 0, len(addon.Catalogs))
+		for _, c := range addon.Catalogs {
+			cats = append(cats, db.StoredCatalog{Type: c.Type, ID: c.ID, Name: c.Name})
+		}
+		if _, err = d.AddCatalogSource(ctx, addon.Name, endpoint, cats); err != nil {
+			return fmt.Errorf("unable to add catalog")
+		}
+		fmt.Printf("Public catalog configured: %s (%d categories)\n", addon.Name, len(cats))
 		return nil
 	case "bootstrap-admin":
 		if len(os.Args) != 3 {

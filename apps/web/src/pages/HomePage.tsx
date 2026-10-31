@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router'
 import { useState } from 'react'
 import Brand from '../components/Brand'
+import CatalogHome from '../components/CatalogHome'
 import { useAuth } from '../auth/AuthContext'
 
 export default function HomePage() {
@@ -8,6 +9,7 @@ export default function HomePage() {
   const navigate = useNavigate()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [hasCatalog, setHasCatalog] = useState(false)
 
   async function signOut() {
     setPending(true)
@@ -31,7 +33,7 @@ export default function HomePage() {
       </div>
     </header>
     <main className="yf-app__main">
-      <section className="yf-feature" aria-labelledby="feature-title">
+      {!hasCatalog && <section className="yf-feature" aria-labelledby="feature-title">
         <div className="yf-feature__spotlight" aria-hidden="true" />
         <div className="yf-feature__copy">
           <span className="yf-feature__eyebrow">YUFLIX · I WATCH WHAT I WANT.</span>
@@ -41,22 +43,8 @@ export default function HomePage() {
             <span className="yf-feature__status">O catálogo ainda está sendo preparado.</span>}
         </div>
         <span className="yf-feature__signature" aria-hidden="true">YUFLIX</span>
-      </section>
-
-      <section className="yf-library" aria-labelledby="library-title">
-        <div className="yf-library__heading">
-          <div><span className="yf-kicker">SUA BIBLIOTECA</span><h2 id="library-title">Tudo em um lugar.</h2></div>
-          <span className="yf-library__phase">Em preparação</span>
-        </div>
-        <div className="yf-library__empty">
-          <div className="yf-library__glyph" aria-hidden="true"><span>▶</span></div>
-          <div className="yf-library__message">
-            <h3>A biblioteca está a caminho.</h3>
-            <p>Os catálogos ainda não estão conectados. Filmes e episódios só aparecerão aqui quando houver fontes reais disponíveis.</p>
-          </div>
-          {user?.role === 'admin' && <Link to="/admin">Gerenciar <span aria-hidden="true">→</span></Link>}
-        </div>
-      </section>
+      </section>}
+      <CatalogHome isAdmin={user?.role === "admin"} onCatalogPresent={setHasCatalog}/>
     </main>
     {error && <p className="yf-alert yf-app__alert" role="alert">{error}</p>}
     <footer className="yf-app__footer"><span>YuFlix</span><span>I Watch What I Want.</span></footer>

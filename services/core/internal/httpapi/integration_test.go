@@ -114,6 +114,24 @@ func TestIntegrationPostgres17(t *testing.T) {
 	if resp = call("GET", "/api/v1/admin/users", "", memberCookie.Name+"="+memberCookie.Value, ""); resp.Code != 403 {
 		t.Fatalf("member accessed admin %d", resp.Code)
 	}
+	// Sources are shared while permissions stay scoped to the current session.
+	source, err := store.AddCatalogSource(ctx, "Public Catalog", "https://v3-cinemeta.strem.io/manifest.json",
+		[]db.StoredCatalog{{Type: "movie", ID: "top", Name: "Popular"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := call("GET", "/api/v1/catalog/sources", "", memberCookie.Name+"="+memberCookie.Value, "")
+	if response.Code != 200 || strings.Contains(response.Body.String(), "v3-cinemeta.strem.io") {
+		t.Fatalf("catalog sources inaccessible or manifest URL exposed: %d", response.Code)
+	}
+	if response = call("DELETE", "/api/v1/admin/catalog/sources/"+source.ID, "",
+		memberCookie.Name+"="+memberCookie.Value, "https://stream.example.com"); response.Code != 403 {
+		t.Fatalf("member deleted shared catalog: %d", response.Code)
+	}
+	if response = call("DELETE", "/api/v1/admin/catalog/sources/"+source.ID, "",
+		adminCookie, "https://stream.example.com"); response.Code != 204 {
+		t.Fatalf("admin could not remove shared catalog: %d", response.Code)
+	}
 	if resp = call("POST", "/api/v1/auth/logout", "", adminCookie, "https://stream.example.com"); resp.Code != 204 {
 		t.Fatalf("logout %d", resp.Code)
 	}

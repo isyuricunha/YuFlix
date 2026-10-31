@@ -34,6 +34,7 @@ function serve(options: {
   session?: typeof admin
   success?: boolean
   authenticationReady?: boolean
+  catalog?: boolean
 } = {}) {
   const fakeFetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = input.toString()
@@ -49,6 +50,20 @@ function serve(options: {
         ? fakeResponse({ user: admin })
         : fakeResponse({ error: 'usuário ou senha inválidos' }, 401)
     }
+    if (path.endsWith('/catalog/sources')) return fakeResponse({ sources: options.catalog ? [{
+      id:'123e4567-e89b-12d3-a456-426614174000',name:'Cinemeta',enabled:true,
+      catalogs:[{type:'movie',id:'top',name:'Popular'}],
+    }] : [] })
+    if (path.includes('/catalog/sources/') && path.includes('/items?')) return fakeResponse({
+      items:[{id:'tt0133093',type:'movie',name:'The Matrix',
+        poster:'https://images.metahub.space/poster/small/tt0133093/img',
+        background:'https://images.metahub.space/background/medium/tt0133093/img',
+        description:'A science fiction film.'}],
+    })
+    if (path.includes('/catalog/sources/') && path.includes('/meta?')) return fakeResponse({
+      meta:{id:'tt0133093',type:'movie',name:'The Matrix',
+        description:'A science fiction film.',releaseInfo:'1999',genres:['Sci-Fi']},
+    })
     if (path.endsWith('/admin/users')) return fakeResponse({ users: [admin, member] })
     if (path.endsWith('/admin/settings')) return fakeResponse({ settings: {} })
     return fakeResponse({ error: 'not found' }, 404)
@@ -134,4 +149,22 @@ describe('YuFlix authentication experience', () => {
     expect(await screen.findByText('Acesso não configurado')).toBeTruthy()
     expect((screen.getByRole('button', { name: 'Entrar' }) as HTMLButtonElement).disabled).toBe(true)
   })
+
+  it('displays titles from a real catalog API response without pretending to play', async () => {
+    serve({session:admin,catalog:true})
+    route('/')
+    expect(await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})).toBeTruthy()
+    expect(screen.getByText(/reprodução ainda não está disponível/i)).toBeTruthy()
+  })
+
+  it('opens catalog metadata details with playback explicitly unavailable', async () => {
+    serve({session:admin,catalog:true})
+    const actor = userEvent.setup()
+    route('/')
+    const card = await screen.findByRole('link',{name:'Ver detalhes de The Matrix'})
+    await actor.click(card)
+    expect(await screen.findByRole('heading',{level:1,name:'The Matrix'})).toBeTruthy()
+    expect(screen.getByText('Reprodução indisponível nesta etapa')).toBeTruthy()
+  })
+
 })

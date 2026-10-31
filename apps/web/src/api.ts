@@ -45,3 +45,19 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
+
+export type CatalogDefinition = { type: string; id: string; name: string }
+export type CatalogSource = { id: string; name: string; enabled: boolean; catalogs: CatalogDefinition[] }
+export type CatalogItem = {
+  id: string
+  type: string
+  name: string
+  poster?: string
+  background?: string
+  description?: string
+  releaseInfo?: string
+}
+export type CatalogDetail = CatalogItem & {
+  genres?: string[]
+  videos?: { id: string; title: string; season: number; episode: number }[]
+}

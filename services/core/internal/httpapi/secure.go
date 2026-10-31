@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/isyuricunha/YuFlix/services/core/internal/catalog"
 	"github.com/isyuricunha/YuFlix/services/core/internal/db"
 )
 
@@ -33,6 +34,8 @@ type api struct {
 	trustProxy    bool
 	limit         *loginLimiter
 	passwordSlots chan struct{}
+	catalogClient *catalog.Client
+	cache         *catalogCache
 }
 type transportKey struct{}
 
@@ -107,7 +110,7 @@ func (l *loginLimiter) allow(key string) bool {
 func (l *loginLimiter) reset(key string) { l.mu.Lock(); defer l.mu.Unlock(); delete(l.items, key) }
 func newAPI(o Options) *api {
 	a := &api{db: o.Database, origins: map[string]struct{}{}, trustProxy: o.TrustProxy,
-		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2)}
+		limit: &loginLimiter{items: map[string]loginEntry{}}, passwordSlots: make(chan struct{}, 2), catalogClient: catalog.NewClient(), cache: &catalogCache{data: map[string]catalogCacheEntry{}}}
 	for _, origin := range append([]string{o.PublicOrigin}, o.AllowedOrigins...) {
 		if v, ok := validOrigin(origin, o.AllowInsecureHTTP); ok {
 			a.origins[v] = struct{}{}
